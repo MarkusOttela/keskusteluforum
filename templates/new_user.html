@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rekisteröi uusi käyttäjätunnus</title>
+</head>
+<body>
+
+Rekisteröidy
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+<form action="/register" method="POST">
+    Käyttäjätunnus<br>
+    <input type="text" name="username"><br>
+    Salasana<br>
+    <input type="password1" name="password2"><br>
+    Salasana uudelleen<br>
+    <input type="password2" name="password1"><br>
+
+    <input type="submit" value="Kirjaudu">
+</form>
+
+</body>
+</html>

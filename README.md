@@ -9,9 +9,9 @@
   * [ ] Jokaisen alueen ketjujen ja viestien määrän ja
   * [ ] Viimeksi lähetetyn viestin ajankohdan
 * [ ] Voi 
-  * [ ] Rekisteröityä
-  * [ ] Kirjautua sisään
-  * [ ] Kirjautua ulos
+  * [x] Rekisteröityä
+  * [x] Kirjautua sisään
+  * [x] Kirjautua ulos
   * [ ] Luoda ketjun otsikolla ja aloitusviestillä
   * [ ] Kirjoittaa viestin julkisiin ketjuihin
   * [ ] Muokata otsikkoa ja viestiä 10 minuutin ajan 

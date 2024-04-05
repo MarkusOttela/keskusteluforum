@@ -20,31 +20,11 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import logging
+from os import getenv
 
-from dotenv import load_dotenv
-from flask  import cli, Flask
-from os     import getenv
+from flask_sqlalchemy import SQLAlchemy
 
-app = Flask(__name__)
+from app import app
 
-from routes import *
-
-# Set environment
-load_dotenv('.env')
-app.secret_key = getenv("SECRET_KEY")
-
-
-def main() -> None:
-    """Main application."""
-    # Disable Flask banner
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
-    cli.show_server_banner = lambda *_: None
-
-    print("Keskusteluforum 0.1 Running in http://127.0.0.1:5000")
-    app.run()
-
-
-if __name__ == '__main__':
-    main()
+app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
+db = SQLAlchemy(app)
