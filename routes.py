@@ -20,7 +20,6 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
-
 from os import getrandom
 
 import argon2
@@ -36,8 +35,26 @@ from db  import db
 def create_tables():
     """Initialize the database tables."""
     app.before_request_funcs[None].remove(create_tables)  # Run only on first request
-    sql = text("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT, password_hash TEXT)")
-    db.session.execute(sql)
+    command = text("CREATE TABLE IF NOT EXISTS users ("
+                   "user_id SERIAL PRIMARY KEY, "
+                   "username TEXT, "
+                   "join_tstamp TIMESTAMP, "
+                   "password_hash TEXT)")
+    db.session.execute(command)
+    db.session.commit()
+
+    command = text("CREATE TABLE IF NOT EXISTS categories ("
+                   "category_id SERIAL PRIMARY KEY, "
+                   "name TEXT)")
+    db.session.execute(command)
+    db.session.commit()
+
+    command = text("CREATE TABLE IF NOT EXISTS threads ("
+                   "table_id SERIAL PRIMARY KEY, "
+                   "category_id INTEGER, "
+                   "FOREIGN KEY (category_id) REFERENCES categories(category_id), "
+                   "name TEXT)")
+    db.session.execute(command)
     db.session.commit()
 
 
