@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Rekisteröi uusi käyttäjätunnus</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-Rekisteröidy
+<h1>Rekisteröidy</h1>
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}
@@ -26,7 +27,7 @@ Rekisteröidy
     Salasana uudelleen<br>
     <input type="password" name="password1"><br>
 
-    <input type="submit" value="Kirjaudu">
+    <input type="submit" value="Luo tunnus">
 </form>
 
 </body>

@@ -32,7 +32,7 @@ from sqlalchemy import text
 from app import app
 from db  import db
 
-from src.classes import Thread
+from src.classes import Reply, Thread
 
 
 @app.before_request
@@ -168,6 +168,52 @@ def index() -> str:
 
     except KeyError:
         return render_template('index.html')
+
+@app.route("/thread/<int:thread_id>/")
+def thread(thread_id: int) -> str:
+    """Return thread page matching the given thread_id."""
+    if not session["username"]:
+        return render_template('index.html')
+
+    sql = text("SELECT "
+               "  threads.thread_id, "
+               "  threads.category_id, "
+               "  threads.user_id, "
+               "  users.username, "
+               "  threads.thread_tstamp, "
+               "  threads.title, "
+               "  threads.content "
+               "FROM "
+               "  threads, users "
+               "WHERE "
+               "  threads.user_id = users.user_id "
+               "  AND"
+               "  threads.thread_id = :thread_id "
+               "ORDER BY thread_tstamp")
+
+    thread_data = db.session.execute(sql, {"thread_id": thread_id}).fetchone()
+    if thread_data:
+        thread_ = Thread(*thread_data)
+
+        sql = text("SELECT "
+                   "  replies.reply_id, "
+                   "  replies.thread_id, "
+                   "  replies.user_id, "
+                   "  users.username, "
+                   "  replies.reply_tstamp, "
+                   "  replies.content "
+                   "FROM "
+                   "  replies, users "
+                   "WHERE "
+                   "  replies.user_id = users.user_id "
+                   "  AND "
+                   "  replies.thread_id = :thread_id "
+                   "ORDER BY replies.reply_tstamp")
+        replies_data = db.session.execute(sql, {"thread_id": thread_id}).fetchall()
+        if replies_data:
+            thread_.replies = [Reply(*data) for data in replies_data]
+
+        return render_template("thread.html", username=session["username"], thread=thread_)
 
 
 @app.route("/login", methods=["POST"])

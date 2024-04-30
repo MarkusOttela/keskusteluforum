@@ -48,30 +48,21 @@ class Thread:
 
 class Reply:
     def __init__(self,
-                 reply_id  : int,
-                 thread_id : int,
-                 user_id   : int,
-                 created   : datetime,
-                 content   : int
+                 reply_id     : int,
+                 thread_id    : int,
+                 user_id      : int,
+                 username     : str,
+                 reply_tstamp : datetime,
+                 content      : int
                  ) -> None:
         """Creat new Reply object."""
         self.reply_id = reply_id
         self.thread_id = thread_id
         self.user_id = user_id
-        self.created = created
+        self.username = username
+        self.reply_tstamp = reply_tstamp
         self.content = content
-        self._username = None
-
-    @property
-    def username(self) -> None:
-        if self._username is None:
-            raise ValueError("Username cannot be None")
-        return self._username
-
-    @username.setter
-    def username(self, username: str) -> None:
-        self._username = username
 
     def __repr__(self) -> str:
-        return (f"      {self._username}  ({self.created})\n"
+        return (f"      {self.username}  ({self.reply_tstamp})\n"
                 f"        {self.content}")
