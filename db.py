@@ -115,6 +115,23 @@ def insert_reply_into_db(thread_id, user_id, message) -> None:
     db.session.commit()
 
 
+def get_total_post_dict() -> dict[str, int]:
+    """Get dict containing {category: total_posts_in_category}."""
+
+    thread_id_dict = dict()
+    forum_thread_dict = get_forum_thread_dict()
+    for category, list_of_threads in forum_thread_dict.items():
+        thread_id_dict[category] = [thread.thread_id for thread in list_of_threads]
+
+    counter_dict = dict()
+    for category, thread_id_list in thread_id_dict.items():
+        counter_dict[category] = 0
+        for thread_id in thread_id_list:
+            counter_dict[category] += len(get_thread(thread_id).replies) + 1
+
+    return counter_dict
+
+
 def get_forum_thread_dict() -> defaultdict:
     """Get forum threads as a {category : [thread1, thread2, ...]} dictionary."""
     sql = text("SELECT category_id, name FROM categories")

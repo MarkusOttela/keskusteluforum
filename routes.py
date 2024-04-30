@@ -30,7 +30,7 @@ from sqlalchemy import text
 
 from app import app
 from db import db, get_thread, get_user_id_by_name, insert_reply_into_db, get_forum_thread_dict, \
-    get_list_of_ids_and_categories, insert_thread_into_db
+    get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict
 
 
 @app.before_request
@@ -138,7 +138,11 @@ def index() -> str:
     if not "username" in session.keys():
         return render_template('index.html')
 
-    return render_template("index.html", username=session["username"], forum_threads=get_forum_thread_dict())
+    return render_template("index.html",
+                           username=session["username"],
+                           forum_threads=get_forum_thread_dict(),
+                           total_post_dict=get_total_post_dict())
+
 
 @app.route("/thread/<int:thread_id>/")
 def thread(thread_id: int) -> str:
@@ -147,6 +151,7 @@ def thread(thread_id: int) -> str:
         return render_template('index.html')
 
     return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
+
 
 @app.route("/new_reply/<int:thread_id>/")
 def reply(thread_id: int) -> str:

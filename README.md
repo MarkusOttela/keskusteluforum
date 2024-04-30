@@ -6,7 +6,7 @@
 **Käyttäjä**
 * [ ] Näkee sovelluksen etusivulla 
   * [x] Listan alueista
-  * [ ] Jokaisen alueen ketjujen ja viestien määrän ja
+  * [x] Jokaisen alueen ketjujen ja viestien määrän, ja
   * [ ] Viimeksi lähetetyn viestin ajankohdan
 * [ ] Voi 
   * [x] Rekisteröityä

@@ -24,7 +24,8 @@
 
     {% if forum_threads  %}
         {% for category, list_of_threads in forum_threads.items() %}
-            <h3>{{ category }}</h3>
+
+            <h3>{{ category }} ({{list_of_threads|length}} ketjua, {{total_post_dict[category]}} viestiä yhteensä)</h3>
 
             {% for thread in list_of_threads %}
             <ul class="no-bullet">
