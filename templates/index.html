@@ -6,9 +6,22 @@
 </head>
 <body>
 
-<h1>Keskusteluforum</h1>
+<style>
+    .no-bullet {
+      list-style-type: none;
+    }
 
-Etusivu<p>
+    .indented {
+        text-indent: 10px;
+    }
+
+    .large-font {
+        font-size: 120%;
+    }
+
+</style>
+
+<h1>Keskusteluforum</h1>
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}
@@ -21,7 +34,22 @@ Etusivu<p>
 {% endwith %}
 
 {% if session.username %}
-    Tervetuloa {{ session.username }}
+    Tervetuloa {{ session.username }}!
+
+    {% if forum_threads  %}
+        {% for category, list_of_threads in forum_threads.items() %}
+            <h3>{{ category }}</h3>
+
+            {% for thread in list_of_threads %}
+            <ul class="no-bullet">
+                <li> <a href="/thread/{{ thread.thread_id }}"><b>{{ thread.title}}</b></a></li>
+                <li class="indented">{{ thread.content}}</li>
+            </ul>
+            {% endfor %}
+
+        {% endfor %}
+    {% endif %}
+
 {% else %}
     <form action="/login" method="POST">
         Käyttäjätunnus<br>

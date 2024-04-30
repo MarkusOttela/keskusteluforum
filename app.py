@@ -42,7 +42,7 @@ def main() -> None:
     log.setLevel(logging.ERROR)
     cli.show_server_banner = lambda *_: None
 
-    print("Keskusteluforum 0.1 Running in http://127.0.0.1:5000")
+    print("Keskusteluforum 0.1 Running in http://127.0.0.1:5000\n")
     app.run()
 
 

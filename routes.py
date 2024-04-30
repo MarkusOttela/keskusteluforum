@@ -20,52 +20,158 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from os import getrandom
+from collections import defaultdict
+from os          import getrandom
 
 import argon2
+import lorem
 
-from flask      import render_template, request, flash, session, redirect
+from flask      import render_template, request, flash, session, redirect, url_for, Response
 from sqlalchemy import text
 
 from app import app
 from db  import db
+
+from src.classes import Thread
 
 
 @app.before_request
 def create_tables():
     """Initialize the database tables."""
     app.before_request_funcs[None].remove(create_tables)  # Run only on first request
-    command = text("CREATE TABLE IF NOT EXISTS users ("
-                   "user_id SERIAL PRIMARY KEY, "
-                   "username TEXT, "
-                   "join_tstamp TIMESTAMP, "
-                   "password_hash TEXT)")
-    db.session.execute(command)
+    sql = text("CREATE TABLE IF NOT EXISTS users ("
+               "user_id SERIAL PRIMARY KEY, "
+               "username TEXT, "
+               "join_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "password_hash TEXT)")
+    db.session.execute(sql)
     db.session.commit()
 
-    command = text("CREATE TABLE IF NOT EXISTS categories ("
-                   "category_id SERIAL PRIMARY KEY, "
-                   "name TEXT)")
-    db.session.execute(command)
+    sql = text("CREATE TABLE IF NOT EXISTS categories ("
+               "category_id SERIAL PRIMARY KEY, "
+               "name TEXT)")
+    db.session.execute(sql)
     db.session.commit()
 
-    command = text("CREATE TABLE IF NOT EXISTS threads ("
-                   "table_id SERIAL PRIMARY KEY, "
-                   "category_id INTEGER, "
-                   "FOREIGN KEY (category_id) REFERENCES categories(category_id), "
-                   "name TEXT)")
-    db.session.execute(command)
+    sql = text("CREATE TABLE IF NOT EXISTS threads ("
+               "thread_id SERIAL PRIMARY KEY, "
+               "category_id INTEGER NOT NULL, "
+               "FOREIGN KEY (category_id) REFERENCES categories(category_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
+               "thread_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "title TEXT,"
+               "content TEXT)")
+    db.session.execute(sql)
     db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS replies ("
+               "reply_id SERIAL PRIMARY KEY, "
+               "thread_id INTEGER NOT NULL, "
+               "FOREIGN KEY (thread_id) REFERENCES threads(thread_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
+               "reply_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "content TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    # Sentinel for checking the databases are filled with mock data only once.
+    sql    = text("SELECT password_hash FROM users WHERE username=(:username)")
+    result = db.session.execute(sql, {"username": "User1"}).first()
+    if result is not None:
+        return
+
+    # Populate with test data:
+    users = ["User1", "User2", "User3", "User4", "User5"]
+    for user in users:
+        password_hash = argon2.PasswordHasher().hash(password=user, salt=getrandom(32, flags=0))
+        sql = text("INSERT INTO users (username, password_hash) "
+                   "VALUES (:username, :password_hash)"
+                   "ON CONFLICT DO NOTHING")
+        db.session.execute(sql, {"username"      : user,
+                                 "password_hash" : password_hash})
+        db.session.commit()
+
+    categories = ["Category 1", "Category 2", "Category 3", "Category 4"]
+    for category in categories:
+        sql = text("INSERT INTO categories (name) "
+                   "VALUES (:category) "
+                   "ON CONFLICT DO NOTHING")
+        db.session.execute(sql, {"category": category})
+        db.session.commit()
+
+    sql = text("SELECT category_id FROM categories")
+    category_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+
+    thread_titles = ["Title 1", "Title 2", "Title 3", "Title 4"]
+    sql           = text("SELECT user_id FROM users")
+    user_ids      = [t[0] for t in db.session.execute(sql).fetchall()]
+    user_id       = user_ids[0]
+
+    for category_id in category_ids:
+        for thread_title in thread_titles:
+            sql = text("INSERT INTO threads (category_id, user_id, title, content) "
+                       "VALUES (:category_id, :user_id, :title, :content) "
+                       "ON CONFLICT DO NOTHING")
+            db.session.execute(sql, {"category_id" : category_id,
+                                     "user_id"     : user_id,
+                                     "title"       : thread_title,
+                                     "content"     : lorem.sentence()})
+            db.session.commit()
+
+    sql        = text("SELECT thread_id FROM threads")
+    thread_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+
+    for thread_id in thread_ids:
+        for user_id in user_ids:
+            sql = text("INSERT INTO replies (thread_id, user_id, content)"
+                       "VALUES (:thread_id, :user_id, :content)"
+                       "ON CONFLICT DO NOTHING")
+            db.session.execute(sql, {"thread_id" : thread_id,
+                                     "user_id"   : user_id,
+                                     "content"   : lorem.sentence()})
+            db.session.commit()
 
 
 @app.route("/")
 def index() -> str:
     """Return the Index page."""
-    return render_template('index.html')
+    try:
+        if session["username"]:
+            sql = text("SELECT category_id, name FROM categories")
+            ids_and_categories = db.session.execute(sql).fetchall()
+
+            sql = text("SELECT "
+                       "  threads.thread_id, "
+                       "  threads.category_id, "
+                       "  threads.user_id, "
+                       "  users.username, "
+                       "  threads.thread_tstamp, "
+                       "  threads.title, "
+                       "  threads.content "
+                       "FROM "
+                       "  threads, users "
+                       "WHERE"
+                       "  threads.user_id = users.user_id "
+                       "ORDER BY thread_tstamp")
+            db_data = db.session.execute(sql).fetchall()
+            threads = [Thread(*thread_data) for thread_data in db_data]
+
+            forum_threads = defaultdict(list)
+            for category_id, category in ids_and_categories:
+                for thread in threads:
+                    if thread.category_id == category_id:
+                        forum_threads[category].append(thread)
+
+            return render_template("index.html", username=session["username"], forum_threads=forum_threads)
+
+    except KeyError:
+        return render_template('index.html')
 
 
 @app.route("/login", methods=["POST"])
-def login() -> str:
+def login() -> str | Response:
     """Authentication to Keskusteluforum."""
     login_error = "Käyttäjätunnusta ei löytynyt tai salasana on väärin."
 
@@ -85,7 +191,7 @@ def login() -> str:
     except argon2.exceptions.VerifyMismatchError:
         flash(login_error)
 
-    return render_template('index.html')
+    return redirect(url_for('index'))
 
 
 @app.route("/logout")
