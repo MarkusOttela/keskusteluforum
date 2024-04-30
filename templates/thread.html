@@ -21,21 +21,20 @@
 
 {% if session.username %}
     <p>
-    (By {{thread.username}} on {{thread.created}})
+    ({{thread.username}}, {{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})
     <p>
     {{thread.content}}
 
     {% for reply in thread.replies %}
-
-    <ul>
-    <li>
-        {{reply.username}}<br>
-        {{reply.reply_tstamp}}<br>
-        {{reply.content}}
-    </ul>
+        <ul>
+        <li>
+            {{reply.username}}<br>
+            {{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}<br>
+            {{reply.content}}
+        </ul>
 
     {% endfor %}
-
+    <p><a href="/new_reply/{{ thread.thread_id }}" class="btn btn-primary">Vastaa</a>
     <p><a href="{{url_for('index')}}" class="btn btn-primary">Etusivulle</a>
     <p><a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
 {% endif %}

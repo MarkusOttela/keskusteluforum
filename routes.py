@@ -20,8 +20,7 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from collections import defaultdict
-from os          import getrandom
+from os import getrandom
 
 import argon2
 import lorem
@@ -30,10 +29,15 @@ from flask      import render_template, request, flash, session, redirect, url_f
 from sqlalchemy import text
 
 from app import app
-from db  import db
+from db import db, get_thread, get_user_id_by_name, insert_reply_to_db, get_forum_thread_dict
 
-from src.classes import Reply, Thread
 
+def login_check():
+    """Check whether user is logged in."""
+    try:
+        session["username"]
+    except KeyError:
+        return render_template('index.html')
 
 @app.before_request
 def create_tables():
@@ -137,83 +141,42 @@ def create_tables():
 @app.route("/")
 def index() -> str:
     """Return the Index page."""
-    try:
-        if session["username"]:
-            sql = text("SELECT category_id, name FROM categories")
-            ids_and_categories = db.session.execute(sql).fetchall()
+    login_check()
 
-            sql = text("SELECT "
-                       "  threads.thread_id, "
-                       "  threads.category_id, "
-                       "  threads.user_id, "
-                       "  users.username, "
-                       "  threads.thread_tstamp, "
-                       "  threads.title, "
-                       "  threads.content "
-                       "FROM "
-                       "  threads, users "
-                       "WHERE"
-                       "  threads.user_id = users.user_id "
-                       "ORDER BY thread_tstamp")
-            db_data = db.session.execute(sql).fetchall()
-            threads = [Thread(*thread_data) for thread_data in db_data]
-
-            forum_threads = defaultdict(list)
-            for category_id, category in ids_and_categories:
-                for thread in threads:
-                    if thread.category_id == category_id:
-                        forum_threads[category].append(thread)
-
-            return render_template("index.html", username=session["username"], forum_threads=forum_threads)
-
-    except KeyError:
-        return render_template('index.html')
+    return render_template("index.html", username=session["username"], forum_threads=get_forum_thread_dict())
 
 @app.route("/thread/<int:thread_id>/")
 def thread(thread_id: int) -> str:
     """Return thread page matching the given thread_id."""
-    if not session["username"]:
-        return render_template('index.html')
+    login_check()
 
-    sql = text("SELECT "
-               "  threads.thread_id, "
-               "  threads.category_id, "
-               "  threads.user_id, "
-               "  users.username, "
-               "  threads.thread_tstamp, "
-               "  threads.title, "
-               "  threads.content "
-               "FROM "
-               "  threads, users "
-               "WHERE "
-               "  threads.user_id = users.user_id "
-               "  AND"
-               "  threads.thread_id = :thread_id "
-               "ORDER BY thread_tstamp")
+    return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
 
-    thread_data = db.session.execute(sql, {"thread_id": thread_id}).fetchone()
-    if thread_data:
-        thread_ = Thread(*thread_data)
+@app.route("/new_reply/<int:thread_id>/")
+def reply(thread_id: int) -> str:
+    """Send reply upload form to the user."""
+    login_check()
 
-        sql = text("SELECT "
-                   "  replies.reply_id, "
-                   "  replies.thread_id, "
-                   "  replies.user_id, "
-                   "  users.username, "
-                   "  replies.reply_tstamp, "
-                   "  replies.content "
-                   "FROM "
-                   "  replies, users "
-                   "WHERE "
-                   "  replies.user_id = users.user_id "
-                   "  AND "
-                   "  replies.thread_id = :thread_id "
-                   "ORDER BY replies.reply_tstamp")
-        replies_data = db.session.execute(sql, {"thread_id": thread_id}).fetchall()
-        if replies_data:
-            thread_.replies = [Reply(*data) for data in replies_data]
+    return render_template("new_reply.html", username=session["username"], thread=get_thread(thread_id))
 
-        return render_template("thread.html", username=session["username"], thread=thread_)
+
+@app.route("/submit_reply/<int:thread_id>/", methods=["GET", "POST"])
+def submit_reply(thread_id: int) -> str:
+    """Submit reply from user to the thread."""
+    login_check()
+
+    if request.method == 'POST':
+        message = request.form.get('message')
+
+        # Validate input
+        if not message:
+            flash("Virhe: Viesti ei voi olla tyhjä.")
+            return render_template('new_reply.html', username=session["username"], thread=get_thread(thread_id))
+
+        user_id = get_user_id_by_name()
+        insert_reply_to_db(thread_id, user_id, message)
+
+    return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
 
 
 @app.route("/login", methods=["POST"])
