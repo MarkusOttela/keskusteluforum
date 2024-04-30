@@ -20,20 +20,21 @@
 {% endwith %}
 
 {% if session.username %}
-    <p>
-    ({{thread.username}}, {{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})
+    <p style="font-size: small;">
+        <b>{{thread.username}}</b> ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}}):
     <p>
     {{thread.content}}
 
+    <ul>
     {% for reply in thread.replies %}
-        <ul>
-        <li>
-            {{reply.username}}<br>
-            {{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}<br>
-            {{reply.content}}
-        </ul>
-
+    <li>
+        <span style="font-size: small;">
+            <b>{{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
+        </span>
+        {{reply.content}}
     {% endfor %}
+    </ul>
+
     <p><a href="/new_reply/{{ thread.thread_id }}" class="btn btn-primary">Vastaa</a>
     <p><a href="{{url_for('index')}}" class="btn btn-primary">Etusivulle</a>
     <p><a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>

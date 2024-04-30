@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+{% if ids_and_categories %}
+    <form action="/submit_thread/" method="post">
+
+        <label for="categories">Valitse kategoria ketjulle:</label>
+        <select id="categories" name="category_id">
+            {% for cat_id, category_name in ids_and_categories %}
+                <option value="{{ cat_id }}">{{ category_name }}</option>
+            {% endfor %}
+        </select>
+
+    <p>
+    <label for="title">Otsikko:</label><br>
+    <textarea id="title" name="title" rows="1" cols="50"></textarea>
+    <label for="message">Viesti:</label><br>
+    <textarea id="message" name="message" rows="10" cols="50"></textarea>
+    <br><input type="submit" value="Lähetä">
+    {% endif %}
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+
+</form>
+
+</body>
+</html>

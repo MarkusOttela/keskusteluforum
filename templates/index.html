@@ -48,6 +48,7 @@
 {% endif %}
 
 {% if session.username %}
+    <p><a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
     <p><a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
 {% endif %}
 

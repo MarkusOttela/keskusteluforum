@@ -33,6 +33,12 @@ from src.classes import Thread, Reply
 app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
 db = SQLAlchemy(app)
 
+def get_list_of_ids_and_categories() -> list[tuple[int, str]]:
+    """Get list of categories (id and string)."""
+    sql = text("SELECT category_id, name FROM categories")
+    ids_and_categories = db.session.execute(sql).fetchall()
+    return ids_and_categories
+
 
 def get_thread(thread_id: int) -> Thread:
     """Get Thread object generated from database with thread_id."""
@@ -76,14 +82,29 @@ def get_thread(thread_id: int) -> Thread:
     return thread
 
 
-def get_user_id_by_name():
+def get_user_id_by_name() -> int:
     """Get user's user_id by username."""
     sql = text("SELECT users.user_id FROM users WHERE username=(:username)")
     user_id = db.session.execute(sql, {"username": session["username"]}).fetchone()[0]
     return user_id
 
+def insert_thread_into_db(category_id: int , user_id: int, title: str, message: str) -> int:
+    """Insert new thread into the database."""
+    sql = text("INSERT INTO threads (category_id, user_id, title, content) "
+               "VALUES (:category_id, :user_id, :title, :content) "
+               "ON CONFLICT DO NOTHING "
+               "RETURNING thread_id")
+    thread_id = db.session.execute(sql, {"category_id": category_id,
+                                         "user_id": user_id,
+                                         "title": title,
+                                         "content": message}).fetchone()[0]
 
-def insert_reply_to_db(thread_id, user_id, message):
+    db.session.commit()
+
+    return thread_id
+
+
+def insert_reply_into_db(thread_id, user_id, message) -> None:
     """Insert reply to replies table."""
     sql = text("INSERT INTO replies (thread_id, user_id, content)"
                "VALUES (:thread_id, :user_id, :content)"

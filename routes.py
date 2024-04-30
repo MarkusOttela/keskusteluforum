@@ -29,15 +29,9 @@ from flask      import render_template, request, flash, session, redirect, url_f
 from sqlalchemy import text
 
 from app import app
-from db import db, get_thread, get_user_id_by_name, insert_reply_to_db, get_forum_thread_dict
+from db import db, get_thread, get_user_id_by_name, insert_reply_into_db, get_forum_thread_dict, \
+    get_list_of_ids_and_categories, insert_thread_into_db
 
-
-def login_check():
-    """Check whether user is logged in."""
-    try:
-        session["username"]
-    except KeyError:
-        return render_template('index.html')
 
 @app.before_request
 def create_tables():
@@ -141,21 +135,24 @@ def create_tables():
 @app.route("/")
 def index() -> str:
     """Return the Index page."""
-    login_check()
+    if not "username" in session.keys():
+        return render_template('index.html')
 
     return render_template("index.html", username=session["username"], forum_threads=get_forum_thread_dict())
 
 @app.route("/thread/<int:thread_id>/")
 def thread(thread_id: int) -> str:
     """Return thread page matching the given thread_id."""
-    login_check()
+    if not "username" in session.keys():
+        return render_template('index.html')
 
     return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
 
 @app.route("/new_reply/<int:thread_id>/")
 def reply(thread_id: int) -> str:
     """Send reply upload form to the user."""
-    login_check()
+    if not "username" in session.keys():
+        return render_template('index.html')
 
     return render_template("new_reply.html", username=session["username"], thread=get_thread(thread_id))
 
@@ -163,7 +160,8 @@ def reply(thread_id: int) -> str:
 @app.route("/submit_reply/<int:thread_id>/", methods=["GET", "POST"])
 def submit_reply(thread_id: int) -> str:
     """Submit reply from user to the thread."""
-    login_check()
+    if not "username" in session.keys():
+        return render_template('index.html')
 
     if request.method == 'POST':
         message = request.form.get('message')
@@ -174,9 +172,51 @@ def submit_reply(thread_id: int) -> str:
             return render_template('new_reply.html', username=session["username"], thread=get_thread(thread_id))
 
         user_id = get_user_id_by_name()
-        insert_reply_to_db(thread_id, user_id, message)
+        insert_reply_into_db(thread_id, user_id, message)
+
 
     return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
+
+
+@app.route("/new_thread/", methods=["GET", "POST"])
+def new_thread() -> str:
+    """Create new thread to the forum."""
+    if not "username" in session.keys():
+        return render_template('index.html')
+
+    return render_template("new_thread.html", username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+
+
+@app.route("/submit_thread/", methods=["GET", "POST"])
+def submit_thread() -> str:
+    """Submit thread from user to the forum."""
+    if not "username" in session.keys():
+        return render_template('index.html')
+
+    if request.method == 'POST':
+        category_id = request.form.get('category_id')
+        title       = request.form.get('title')
+        message     = request.form.get('message')
+
+        # Validate input
+        if not category_id.isnumeric():
+            flash("Virhe: Kategoriatunnus ei ollut numero.")
+            return render_template('new_thread.html', username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+
+        if not title:
+            flash("Virhe: Otsikko ei voi olla tyhjä.")
+            return render_template('new_thread.html', username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+
+        if not message:
+            flash("Virhe: Viesti ei voi olla tyhjä.")
+            return render_template('new_thread.html', username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+
+        thread_id = insert_thread_into_db(int(category_id), get_user_id_by_name(), title, message)
+
+        return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
+
+    else:
+        return render_template("index.html", username=session["username"], forum_threads=get_forum_thread_dict())
 
 
 @app.route("/login", methods=["POST"])
