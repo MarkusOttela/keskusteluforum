@@ -20,6 +20,8 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import datetime
+
 from collections import defaultdict
 from os          import getenv
 
@@ -113,6 +115,21 @@ def insert_reply_into_db(thread_id, user_id, message) -> None:
                              "user_id": user_id,
                              "content": message})
     db.session.commit()
+
+def get_most_recent_post_tstamp_dict() -> dict[int, datetime.datetime]:
+    """Get most recent reply from thread."""
+    thread_id_dict = dict()
+    forum_thread_dict = get_forum_thread_dict()
+    for category, list_of_threads in forum_thread_dict.items():
+        thread_id_dict[category] = [thread.thread_id for thread in list_of_threads]
+
+    timestamp_dict = dict()
+    for category, thread_id_list in thread_id_dict.items():
+        for thread_id in thread_id_list:
+            thread = get_thread(thread_id)
+            timestamp_dict[thread_id] = thread.replies[-1].reply_tstamp
+
+    return timestamp_dict
 
 
 def get_total_post_dict() -> dict[str, int]:

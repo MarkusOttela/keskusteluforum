@@ -31,7 +31,8 @@
             <ul class="no-bullet">
                 <li> <a href="/thread/{{ thread.thread_id }}">{{thread.title}}</a>
                     <span style="font-size: small;"><b> - {{thread.username}}</b>
-                        ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
+                        ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})
+                        (Tuorein viesti: {{most_recent_post_dict[thread.thread_id].strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
                 <li class="indented">{{ thread.content|truncate(50, True)}}</li>
             </ul>
             {% endfor %}

@@ -30,7 +30,7 @@ from sqlalchemy import text
 
 from app import app
 from db import db, get_thread, get_user_id_by_name, insert_reply_into_db, get_forum_thread_dict, \
-    get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict
+    get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict, get_most_recent_post_tstamp_dict
 
 
 @app.before_request
@@ -141,7 +141,8 @@ def index() -> str:
     return render_template("index.html",
                            username=session["username"],
                            forum_threads=get_forum_thread_dict(),
-                           total_post_dict=get_total_post_dict())
+                           total_post_dict=get_total_post_dict(),
+                           most_recent_post_dict=get_most_recent_post_tstamp_dict())
 
 
 @app.route("/thread/<int:thread_id>/")

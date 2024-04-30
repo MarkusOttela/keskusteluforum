@@ -4,10 +4,10 @@
 ## Toiminnallisuus
 
 **Käyttäjä**
-* [ ] Näkee sovelluksen etusivulla 
+* [x] Näkee sovelluksen etusivulla 
   * [x] Listan alueista
   * [x] Jokaisen alueen ketjujen ja viestien määrän, ja
-  * [ ] Viimeksi lähetetyn viestin ajankohdan
+  * [x] Viimeksi lähetetyn viestin ajankohdan
 * [ ] Voi 
   * [x] Rekisteröityä
   * [x] Kirjautua sisään
