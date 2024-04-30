@@ -28,8 +28,10 @@
 
             {% for thread in list_of_threads %}
             <ul class="no-bullet">
-                <li> <a href="/thread/{{ thread.thread_id }}"><b>{{ thread.title}}</b></a></li>
-                <li class="indented">{{ thread.content}}</li>
+                <li> <a href="/thread/{{ thread.thread_id }}">{{thread.title}}</a>
+                    <span style="font-size: small;"><b> - {{thread.username}}</b>
+                        ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
+                <li class="indented">{{ thread.content|truncate(50, True)}}</li>
             </ul>
             {% endfor %}
 
