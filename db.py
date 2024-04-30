@@ -127,7 +127,10 @@ def get_most_recent_post_tstamp_dict() -> dict[int, datetime.datetime]:
     for category, thread_id_list in thread_id_dict.items():
         for thread_id in thread_id_list:
             thread = get_thread(thread_id)
-            timestamp_dict[thread_id] = thread.replies[-1].reply_tstamp
+            try:
+                timestamp_dict[thread_id] = thread.replies[-1].reply_tstamp
+            except IndexError:
+                timestamp_dict[thread_id] = thread.created
 
     return timestamp_dict
 
