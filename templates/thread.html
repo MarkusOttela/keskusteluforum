@@ -34,12 +34,18 @@
     {% for reply in thread.replies %}
     <li>
         <span style="font-size: small;">
-            <b>{{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
+            <b>{{reply.likes|length}} 👍 {{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
         </span>
         {{reply.content}}
         {% if reply.username == session.username %}
-        <br><a href="/edit_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Muokkaa</a>
-        <a href="/delete_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Poista</a><br>
+            <br><a href="/edit_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Muokkaa</a>
+            <a href="/delete_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Poista</a><br>
+        {%else%}
+            {%if user_id not in reply.likes %}
+            <br><a href="/like_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Tykkää</a>
+            {%else%}
+            <br><a href="/unlike_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Älä tykkää</a>
+            {%endif%}
         {% endif %}
 
     {% endfor %}

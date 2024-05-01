@@ -31,7 +31,8 @@ from app import app
 from db import db, get_thread, get_users_id, insert_reply_into_db, get_forum_thread_dict, \
     get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict, get_most_recent_post_tstamp_dict, \
     initialize_db, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db, \
-    update_thread_in_db, get_reply_by_id, update_reply_in_db
+    update_thread_in_db, get_reply_by_id, update_reply_in_db, insert_like_to_db, user_has_liked_reply, \
+    remove_like_from_db
 
 USERNAME = "username"
 POST = "POST"
@@ -82,6 +83,7 @@ def thread(thread_id: int) -> str:
         return render_template(Template.INDEX)
 
     return render_template(Template.THREAD,
+                           user_id=get_users_id(),
                            username=session[USERNAME],
                            thread=get_thread(thread_id))
 
@@ -280,7 +282,7 @@ def submit_modified_reply(thread_id: int, reply_id: int) -> str:
 
         update_reply_in_db(reply_id, message)
 
-        return redirect(f"/thread/{thread_id}")
+        return redirect(f"/thread/{thread_id}")  # type: ignore
 
 
 @app.route("/delete_reply/<int:thread_id>/<int:reply_id>/", methods=[GET, POST])
@@ -295,7 +297,43 @@ def delete_reply(thread_id: int, reply_id: int) -> str:
     else:
         flash("Virhe: Väärä käyttäjä.")
 
-    return redirect(f"/thread/{thread_id}")
+    return redirect(f"/thread/{thread_id}")  # type: ignore
+
+
+###############################################################################
+#                                    LIKES                                    #
+###############################################################################
+
+@app.route("/like_reply/<int:thread_id>/<int:reply_id>/", methods=[GET, POST])
+def like_reply(thread_id: int, reply_id: int) -> str:
+    """Store like from user to a reply."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+
+    if get_username_by_reply_id(reply_id) == session[USERNAME]:
+        flash("Et voi tykätä omasta vastauksestasi.")
+    elif user_has_liked_reply(get_users_id(), reply_id):
+        flash("Et voi tykätä vastauksesta uudestaan.")
+    else:
+        insert_like_to_db(get_users_id(), reply_id)
+
+    return redirect(f"/thread/{thread_id}")  # type: ignore
+
+
+@app.route("/unlike_reply/<int:thread_id>/<int:reply_id>/", methods=[GET, POST])
+def unlike_reply(thread_id: int, reply_id: int) -> str:
+    """Remove user's like to a reply."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+
+    if get_username_by_reply_id(reply_id) == session[USERNAME]:
+        flash("Et voi tykätä omista vastauksistasi ja siksi poistaa niistä tykkäyksiä.")
+    elif not user_has_liked_reply(get_users_id(), reply_id):
+        flash("Et voi poistaa tykkäystä vastauksesta uudestaan.")
+    else:
+        remove_like_from_db(get_users_id(), reply_id)
+
+    return redirect(f"/thread/{thread_id}")  # type: ignore
 
 
 ###############################################################################

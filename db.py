@@ -27,6 +27,7 @@ from os          import getenv, getrandom
 
 import argon2
 import lorem
+import random
 
 from flask            import session
 from flask_sqlalchemy import SQLAlchemy
@@ -81,10 +82,22 @@ def get_thread(thread_id: int) -> Thread:
                "  replies.thread_id = :thread_id "
                "ORDER BY replies.reply_tstamp")
     replies_data = db.session.execute(sql, {"thread_id": thread_id}).fetchall()
-    if replies_data:
-        thread.replies = [Reply(*data) for data in replies_data]
+
+    for reply_data in replies_data:
+        reply = Reply(*reply_data)
+        reply.likes = get_reply_likes(reply.reply_id)
+        thread.replies.append(reply)
 
     return thread
+
+
+def get_reply_likes(reply_id: int) -> list[int]:
+    """Get list of user ids that have liked the reply matching the reply_id."""
+    sql = text("SELECT user_id FROM likes WHERE reply_id = :reply_id")
+    likes_data = db.session.execute(sql, {"reply_id": reply_id}).fetchall()
+    likes = [tup[0] for tup in likes_data]
+    return likes
+
 
 def get_reply_by_id(reply_id: int) -> Reply:
     """Get Reply object generated from database with reply_id."""
@@ -129,6 +142,27 @@ def insert_thread_into_db(category_id: int , user_id: int, title: str, message: 
     return thread_id
 
 
+def insert_like_to_db(user_id: int, reply_id: int) -> None:
+    """Insert like to the database."""
+    sql = text("INSERT INTO likes (reply_id, user_id) VALUES (:reply_id, :user_id)")
+    db.session.execute(sql, {"reply_id": reply_id, "user_id": user_id})
+    db.session.commit()
+
+
+def remove_like_from_db(user_id: int, reply_id: int) -> None:
+    """Remove like from the database."""
+    sql = text("DELETE FROM likes WHERE user_id=:user_id AND reply_id=:reply_id")
+    db.session.execute(sql, {"user_id": user_id, "reply_id": reply_id})
+    db.session.commit()
+
+
+def user_has_liked_reply(user_id: int, reply_id: int) -> bool:
+    """Check if user has liked a reply."""
+    sql = text("SELECT COUNT(*) FROM likes WHERE user_id=:user_id AND reply_id=:reply_id")
+    likes_data = db.session.execute(sql, {"user_id": user_id, "reply_id": reply_id}).fetchone()
+    return bool(likes_data[0])
+
+
 def get_username_by_reply_id(reply_id: int) -> str:
     """Get username by reply_id."""
     sql = text("SELECT users.username "
@@ -138,6 +172,7 @@ def get_username_by_reply_id(reply_id: int) -> str:
                "      replies.reply_id = :reply_id")
     username = db.session.execute(sql, {"reply_id": reply_id}).fetchone()[0]
     return username
+
 
 def get_username_by_thread_id(thread_id: int) -> str:
     """Get username by thread_id."""
@@ -293,6 +328,15 @@ def initialize_db():
     db.session.execute(sql)
     db.session.commit()
 
+    sql = text("CREATE TABLE IF NOT EXISTS likes ("
+               "like_id SERIAL PRIMARY KEY, "
+               "reply_id INTEGER NOT NULL, "
+               "FOREIGN KEY (reply_id) REFERENCES replies(reply_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id))")
+    db.session.execute(sql)
+    db.session.commit()
+
     # Sentinel for checking the databases are filled with mock data only once.
     sql = text("SELECT password_hash FROM users WHERE username=(:username)")
     result = db.session.execute(sql, {"username": "User1"}).first()
@@ -344,8 +388,18 @@ def initialize_db():
         for user_id in user_ids:
             sql = text("INSERT INTO replies (thread_id, user_id, content)"
                        "VALUES (:thread_id, :user_id, :content)"
-                       "ON CONFLICT DO NOTHING")
-            db.session.execute(sql, {"thread_id": thread_id,
+                       "ON CONFLICT DO NOTHING "
+                       "RETURNING reply_id")
+
+            reply_id = db.session.execute(sql, {"thread_id": thread_id,
                                      "user_id": user_id,
-                                     "content": lorem.sentence()})
+                                     "content": lorem.sentence()}).fetchone()[0]
+
+            # 50% probability to like the reply of other posters
+            for user_id_ in user_ids:
+                if user_id_ == user_id and random.randint(0, 1):
+                    continue
+                sql = text("INSERT INTO likes (reply_id, user_id) VALUES (:reply_id, :user_id)")
+                db.session.execute(sql, {"reply_id": reply_id, "user_id": user_id_})
+
             db.session.commit()
