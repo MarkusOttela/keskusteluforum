@@ -8,7 +8,7 @@
   * [x] Listan alueista
   * [x] Jokaisen alueen ketjujen ja viestien määrän, ja
   * [x] Viimeksi lähetetyn viestin ajankohdan
-* [ ] Voi 
+* [x] Voi 
   * [x] Rekisteröityä
   * [x] Kirjautua sisään
   * [x] Kirjautua ulos
