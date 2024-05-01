@@ -22,6 +22,14 @@
 {% if session.username %}
     Tervetuloa {{ session.username }}!
 
+    <p><a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
+    <a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
+
+    <form action="/search_posts" method="GET">
+        Hakusana: <input type="text" name="query">
+        <input type="submit" value="Hae">
+    </form>
+
     {% if forum_threads  %}
         {% for category, list_of_threads in forum_threads.items() %}
 
@@ -51,10 +59,6 @@
     <p><a href="{{url_for('new_user')}}" class="btn btn-primary">Rekisteröidy</a>
 {% endif %}
 
-{% if session.username %}
-    <p><a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
-    <p><a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
-{% endif %}
 
 </body>
 </html>

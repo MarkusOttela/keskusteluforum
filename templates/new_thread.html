@@ -7,6 +7,9 @@
 <body>
 
 {% if ids_and_categories %}
+
+    <h1>Uusi ketju</h1>
+
     <form action="/submit_thread/" method="post">
 
         <label for="categories">Valitse kategoria ketjulle:</label>
@@ -19,7 +22,7 @@
     <p>
     <label for="title">Otsikko:</label><br>
     <textarea id="title" name="title" rows="1" cols="50"></textarea>
-    <label for="message">Viesti:</label><br>
+    <br><label for="message">Viesti:</label><br>
     <textarea id="message" name="message" rows="10" cols="50"></textarea>
     <br><input type="submit" value="Lähetä">
     {% endif %}

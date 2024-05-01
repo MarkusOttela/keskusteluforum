@@ -241,6 +241,18 @@ def get_most_recent_post_tstamp_dict() -> dict[int, datetime.datetime]:
 
     return timestamp_dict
 
+def search_from_db(query: str) -> list[int]:
+    """Get list of thread ids from database that match a search term."""
+    sql = text("SELECT "
+               "    threads.thread_id "
+               "FROM "
+               "    threads "
+               "WHERE "
+               "    title LIKE :query "
+               "    OR "
+               "    threads.content LIKE :query")
+    return [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
+
 
 def get_total_post_dict() -> dict[str, int]:
     """Get dict containing {category: total_posts_in_category}."""

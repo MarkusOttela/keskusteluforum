@@ -32,21 +32,21 @@ from db import db, get_thread, get_users_id, insert_reply_into_db, get_forum_thr
     get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict, get_most_recent_post_tstamp_dict, \
     initialize_db, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db, \
     update_thread_in_db, get_reply_by_id, update_reply_in_db, insert_like_to_db, user_has_liked_reply, \
-    remove_like_from_db
+    remove_like_from_db, search_from_db
 
 USERNAME = "username"
 POST = "POST"
 GET  = "GET"
 
 class Template:
-    INDEX      = 'index.html'
-    THREAD     = 'thread.html'
-    NEW_THREAD = 'new_thread.html'
-    NEW_USER   = 'new_user.html'
-    NEW_REPLY  = 'new_reply.html'
-    REPLY      = 'reply.html'
-    EDIT_REPLY = 'edit_reply.html'
-
+    INDEX          = 'index.html'
+    THREAD         = 'thread.html'
+    NEW_THREAD     = 'new_thread.html'
+    NEW_USER       = 'new_user.html'
+    NEW_REPLY      = 'new_reply.html'
+    REPLY          = 'reply.html'
+    EDIT_REPLY     = 'edit_reply.html'
+    SEARCH_RESULTS = 'search_results.html'
 
 ###############################################################################
 #                                     MAIN                                    #
@@ -183,10 +183,7 @@ def submit_modified_thread(thread_id: int) -> str:
                                    ids_and_categories=get_list_of_ids_and_categories())
 
         update_thread_in_db(thread_id, title, message)
-
-        return render_template(Template.THREAD,
-                               username=session[USERNAME],
-                               thread=get_thread(thread_id))
+        return redirect(f"/thread/{thread_id}")  # type: ignore
 
 
 @app.route("/delete_thread/<int:thread_id>/", methods=[GET, POST])
@@ -334,6 +331,38 @@ def unlike_reply(thread_id: int, reply_id: int) -> str:
         remove_like_from_db(get_users_id(), reply_id)
 
     return redirect(f"/thread/{thread_id}")  # type: ignore
+
+
+###############################################################################
+#                                    SEARCH                                   #
+###############################################################################
+
+@app.route("/search_posts/", methods=[GET, POST])
+def search_posts() -> str:
+    """Search posts."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+
+    query = request.args["query"]
+
+    if not query:
+        flash(f"Et voi hakea tyhjällä syötteellä.")
+        return redirect(url_for('index'))  # type: ignore
+
+    thread_ids = search_from_db(query)
+
+    if not thread_ids:
+        flash(f"Ei tuloksia haulle '{query}'.")
+        return redirect(url_for('index'))  # type: ignore
+
+    else:
+        threads = [get_thread(thread_id) for thread_id in thread_ids]
+
+        return render_template(Template.SEARCH_RESULTS,
+                               username=session[USERNAME],
+                               query=query,
+                               most_recent_post_dict=get_most_recent_post_tstamp_dict(),
+                               threads=threads)
 
 
 ###############################################################################

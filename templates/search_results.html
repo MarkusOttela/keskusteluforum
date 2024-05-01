@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Keskusteluforum - Hakutulokset sanoille '{{query}}'</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h1>Keskusteluforum</h1>
+
+<h2>Hakutulokset sanoille '{{query}}'</h2>
+
+<h3>Ketjut</h3>
+
+{% for thread in threads %}
+<ul class="no-bullet">
+    <li> <a href="/thread/{{ thread.thread_id }}">{{thread.title}}</a>
+        <span style="font-size: small;"><b> - {{thread.username}}</b>
+            ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})
+            (Tuorein viesti: {{most_recent_post_dict[thread.thread_id].strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
+    <li class="indented">{{ thread.content|truncate(50, True)}}</li>
+</ul>
+{% endfor %}
+
+
+</body>
+</html>
