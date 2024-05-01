@@ -32,6 +32,18 @@ from db import db, get_thread, get_user_id_by_name, insert_reply_into_db, get_fo
     get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict, get_most_recent_post_tstamp_dict, \
     initialize_db, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db
 
+USERNAME = "username"
+POST = "POST"
+GET  = "GET"
+
+class Template:
+    INDEX      = 'index.html'
+    THREAD     = 'thread.html'
+    NEW_THREAD = 'new_thread.html'
+    NEW_USER   = 'new_user.html'
+    NEW_REPLY  = 'new_reply.html'
+    REPLY      = 'reply.html'
+
 
 ###############################################################################
 #                                     MAIN                                    #
@@ -47,11 +59,11 @@ def create_tables():
 @app.route("/")
 def index() -> str:
     """Return the Index page."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
-    return render_template("index.html",
-                           username=session["username"],
+    return render_template(Template.INDEX,
+                           username=session[USERNAME],
                            forum_threads=get_forum_thread_dict(),
                            total_post_dict=get_total_post_dict(),
                            most_recent_post_dict=get_most_recent_post_tstamp_dict())
@@ -64,26 +76,30 @@ def index() -> str:
 @app.route("/thread/<int:thread_id>/")
 def thread(thread_id: int) -> str:
     """Return thread page matching the given thread_id."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
-    return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
+    return render_template(Template.THREAD,
+                           username=session[USERNAME],
+                           thread=get_thread(thread_id))
 
 
-@app.route("/new_thread/", methods=["GET", "POST"])
+@app.route("/new_thread/", methods=[GET, POST])
 def new_thread() -> str:
     """Create new thread to the forum."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
-    return render_template("new_thread.html", username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+    return render_template(Template.NEW_THREAD,
+                           username=session[USERNAME],
+                           ids_and_categories=get_list_of_ids_and_categories())
 
 
-@app.route("/submit_thread/", methods=["GET", "POST"])
+@app.route("/submit_thread/", methods=[GET, POST])
 def submit_thread() -> str:
     """Submit thread from user to the forum."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
     if request.method == 'POST':
         category_id = request.form.get('category_id')
@@ -93,37 +109,51 @@ def submit_thread() -> str:
         # Validate input
         if not category_id.isnumeric():
             flash("Virhe: Kategoriatunnus ei ollut numero.")
-            return render_template('new_thread.html', username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
 
         if not title:
             flash("Virhe: Otsikko ei voi olla tyhjä.")
-            return render_template('new_thread.html', username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
 
         if not message:
             flash("Virhe: Viesti ei voi olla tyhjä.")
-            return render_template('new_thread.html', username=session["username"], ids_and_categories=get_list_of_ids_and_categories())
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
 
         thread_id = insert_thread_into_db(int(category_id), get_user_id_by_name(), title, message)
 
-        return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
+        return render_template(Template.THREAD,
+                               username=session[USERNAME],
+                               thread=get_thread(thread_id))
 
     else:
         return render_template("index.html", username=session["username"], forum_threads=get_forum_thread_dict())
+        return render_template(Template.INDEX,
+                               username=session[USERNAME],
+                               forum_threads=get_forum_thread_dict())
 
 
-@app.route("/delete_thread/<int:thread_id>/", methods=["GET", "POST"])
+
+
+
+@app.route("/delete_thread/<int:thread_id>/", methods=[GET, POST])
 def delete_thread(thread_id: int) -> str:
     """Delete thread."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
-    if get_username_by_thread_id(thread_id) == session['username']:
+    if get_username_by_thread_id(thread_id) == session[USERNAME]:
         delete_thread_from_db(thread_id)
         flash("Ketju poistettu.")
     else:
         flash("Virhe: Väärä käyttäjä.")
 
-    return redirect(url_for('index'))
+    return redirect(url_for('index'))  # type: ignore
 
 
 ###############################################################################
@@ -133,46 +163,54 @@ def delete_thread(thread_id: int) -> str:
 @app.route("/new_reply/<int:thread_id>/")
 def reply_form(thread_id: int) -> str:
     """Send reply upload form to the user."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
-    return render_template("new_reply.html", username=session["username"], thread=get_thread(thread_id))
+    return render_template("new_reply.html",
+                           username=session[USERNAME],
+                           thread=get_thread(thread_id))
 
 
-@app.route("/submit_reply/<int:thread_id>/", methods=["GET", "POST"])
+@app.route("/submit_reply/<int:thread_id>/", methods=[GET, POST])
 def submit_reply(thread_id: int) -> str:
     """Submit reply from user to the thread."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
-    if request.method == 'POST':
+    if request.method == POST:
         message = request.form.get('message')
 
         # Validate input
         if not message:
             flash("Virhe: Viesti ei voi olla tyhjä.")
-            return render_template('new_reply.html', username=session["username"], thread=get_thread(thread_id))
+            return render_template(Template.NEW_REPLY,
+                                   username=session[USERNAME],
+                                   thread=get_thread(thread_id))
 
         user_id = get_user_id_by_name()
         insert_reply_into_db(thread_id, user_id, message)
 
 
-    return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
+    return render_template(Template.THREAD,
+                           username=session[USERNAME],
+                           thread=get_thread(thread_id))
 
 
-@app.route("/delete_reply/<int:thread_id>/<int:reply_id>/", methods=["GET", "POST"])
+@app.route("/delete_reply/<int:thread_id>/<int:reply_id>/", methods=[GET, POST])
 def delete_reply(thread_id: int, reply_id: int) -> str:
     """Delete reply from user to the thread."""
-    if not "username" in session.keys():
-        return render_template('index.html')
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
-    if get_username_by_reply_id(reply_id) == session['username']:
+    if get_username_by_reply_id(reply_id) == session[USERNAME]:
         delete_reply_from_db(reply_id)
         flash("Viesti poistettu.")
     else:
         flash("Virhe: Väärä käyttäjä.")
 
-    return render_template("thread.html", username=session["username"], thread=get_thread(thread_id))
+    return render_template(Template.THREAD,
+                           username=session[USERNAME],
+                           thread=get_thread(thread_id))
 
 
 ###############################################################################
@@ -180,59 +218,59 @@ def delete_reply(thread_id: int, reply_id: int) -> str:
 ###############################################################################
 
 
-@app.route("/new_user", methods=["GET", "POST"])
+@app.route("/new_user", methods=[GET, POST])
 def new_user() -> str:
     """Render page that asks for information from the new user."""
-    return render_template('new_user.html')
+    return render_template(Template.NEW_USER)
 
 
-@app.route("/register", methods=["GET", "POST"])
+@app.route("/register", methods=[GET, POST])
 def register() -> str:
     """Register to Keskusteluforum."""
-    username  = request.form["username"]
+    username  = request.form[USERNAME]
     password1 = request.form["password1"]
     password2 = request.form["password2"]
 
     # Username validation
     sql    = text("SELECT EXISTS(SELECT 1 FROM users WHERE username=(:username))")
-    result = db.session.execute(sql, {"username": username})
+    result = db.session.execute(sql, {USERNAME: username})
     if result.first()[0]:
         flash('Käyttäjänimi on jo käytössä.')
-        return render_template('new_user.html')
+        return render_template(Template.NEW_USER)
 
     # Password validation
     if password1 != password2:
         flash("Salasanat eivät täsmänneet.")
-        return render_template('new_user.html')
+        return render_template(Template.NEW_USER)
 
     # Store hash
     password_hash = argon2.PasswordHasher().hash(password=password1, salt=getrandom(32, flags=0))
     sql = text("INSERT INTO users (username, password_hash) VALUES (:username, :password_hash)")
-    db.session.execute(sql, {"username": username, "password_hash": password_hash})
+    db.session.execute(sql, {USERNAME: username, "password_hash": password_hash})
     db.session.commit()
 
     flash('Olet nyt rekisteröitynyt.')
-    return render_template('index.html')
+    return render_template(Template.INDEX)
 
 
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=[POST])
 def login() -> str | Response:
     """Authentication to Keskusteluforum."""
     login_error = "Käyttäjätunnusta ei löytynyt tai salasana on väärin."
 
-    username = request.form["username"]
+    username = request.form[USERNAME]
     sql      = text("SELECT password_hash FROM users WHERE username=(:username)")
-    result   = db.session.execute(sql, {"username": username}).first()
+    result   = db.session.execute(sql, {USERNAME: username}).first()
 
     if result is None:
         # Username does not exist
         flash(login_error)
-        return render_template('index.html')
+        return render_template(Template.INDEX)
 
     # Authenticate user with password
     try:
         argon2.PasswordHasher().verify(result[0], request.form["password"])
-        session['username'] = username
+        session[USERNAME] = username
     except argon2.exceptions.VerifyMismatchError:
         flash(login_error)
 
@@ -242,5 +280,5 @@ def login() -> str | Response:
 @app.route("/logout")
 def logout():
     """Log out the user."""
-    del session["username"]
+    del session[USERNAME]
     return redirect("/")
