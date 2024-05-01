@@ -16,7 +16,7 @@
   * [x] Kirjoittaa viestin julkisiin ketjuihin
   * [x] Poistaa luomansa ketjun tai viestin
   * [x] Muokata otsikkoa ja viestiä
-  * [ ] Peukuttaa ketjuja ja viestejä ylös tai alas
+  * [x] Peukuttaa viestejä ylös tai alas
   * [ ] Etsiä kaikki viestit, joiden osana on annettu sana
 
 **Ylläpitäjä** 
