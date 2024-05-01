@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vastaa</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h1>Vastaa</h1>
+
+Muokkaa vastaustasi:
+
+
+<form action="/submit_modified_reply/{{thread.thread_id}}/{{reply.reply_id}}" method="post">
+    <textarea name="message" rows="10" cols="50">{{reply.content}}</textarea>
+    <br><input type="submit" value="Lähetä">
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+    <ul style="color: orangered;">
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+
+</form>
+
+</body>
+</html>

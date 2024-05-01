@@ -86,12 +86,32 @@ def get_thread(thread_id: int) -> Thread:
 
     return thread
 
+def get_reply_by_id(reply_id: int) -> Reply:
+    """Get Reply object generated from database with reply_id."""
+    sql = text("SELECT "
+               "  replies.reply_id, "
+               "  replies.thread_id, "
+               "  replies.user_id, "
+               "  users.username, "
+               "  replies.reply_tstamp, "
+               "  replies.content "
+               "FROM "
+               "  replies, users "
+               "WHERE "
+               "  replies.user_id = users.user_id "
+               "  AND "
+               "  replies.reply_id = :reply_id "
+               "ORDER BY replies.reply_tstamp")
+    reply_data = db.session.execute(sql, {"reply_id": reply_id}).fetchone()
+    return Reply(*reply_data)
 
-def get_user_id_by_name() -> int:
+
+def get_users_id() -> int:
     """Get user's user_id by username."""
     sql = text("SELECT users.user_id FROM users WHERE username=(:username)")
     user_id = db.session.execute(sql, {"username": session["username"]}).fetchone()[0]
     return user_id
+
 
 def insert_thread_into_db(category_id: int , user_id: int, title: str, message: str) -> int:
     """Insert new thread into the database."""
@@ -128,6 +148,20 @@ def get_username_by_thread_id(thread_id: int) -> str:
                "      threads.thread_id = :thread_id")
     username = db.session.execute(sql, {"thread_id": thread_id}).fetchone()[0]
     return username
+
+
+def update_thread_in_db(thread_id: int, title: str, message: str) -> None:
+    """Update thread in database."""
+    sql = text("UPDATE threads SET title = :title, content = :content WHERE threads.thread_id = :thread_id ")
+    db.session.execute(sql, {"thread_id": thread_id, "title": title, "content": message})
+    db.session.commit()
+
+
+def update_reply_in_db(reply_id: int, message: str) -> None:
+    """Update reply in database."""
+    sql = text("UPDATE replies SET content = :content WHERE replies.reply_id = :reply_id ")
+    db.session.execute(sql, {"reply_id": reply_id, "content": message})
+    db.session.commit()
 
 
 def delete_reply_from_db(reply_id: int) -> None:

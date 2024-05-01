@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+{% if ids_and_categories %}
+    <form action="/submit_modified_thread/{{thread.thread_id}}" method="post">
+
+    Muokkaa aihetta
+    <p>
+    <label for="title">Otsikko:</label><br>
+    <textarea id="title" name="title" rows="1" cols="50">{{thread.title}}</textarea><br>
+    <label for="message">Viesti:</label><br>
+    <textarea id="message" name="message" rows="10" cols="50" value="{{thread.title}}">{{thread.content}}</textarea>
+    <br><input type="submit" value="Lähetä">
+    {% endif %}
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+
+</form>
+
+</body>
+</html>

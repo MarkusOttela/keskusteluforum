@@ -28,9 +28,10 @@ from flask      import render_template, request, flash, session, redirect, url_f
 from sqlalchemy import text
 
 from app import app
-from db import db, get_thread, get_user_id_by_name, insert_reply_into_db, get_forum_thread_dict, \
+from db import db, get_thread, get_users_id, insert_reply_into_db, get_forum_thread_dict, \
     get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict, get_most_recent_post_tstamp_dict, \
-    initialize_db, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db
+    initialize_db, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db, \
+    update_thread_in_db, get_reply_by_id, update_reply_in_db
 
 USERNAME = "username"
 POST = "POST"
@@ -43,6 +44,7 @@ class Template:
     NEW_USER   = 'new_user.html'
     NEW_REPLY  = 'new_reply.html'
     REPLY      = 'reply.html'
+    EDIT_REPLY = 'edit_reply.html'
 
 
 ###############################################################################
@@ -125,20 +127,64 @@ def submit_thread() -> str:
                                    username=session[USERNAME],
                                    ids_and_categories=get_list_of_ids_and_categories())
 
-        thread_id = insert_thread_into_db(int(category_id), get_user_id_by_name(), title, message)
+        thread_id = insert_thread_into_db(int(category_id), get_users_id(), title, message)
 
         return render_template(Template.THREAD,
                                username=session[USERNAME],
                                thread=get_thread(thread_id))
 
     else:
-        return render_template("index.html", username=session["username"], forum_threads=get_forum_thread_dict())
         return render_template(Template.INDEX,
                                username=session[USERNAME],
                                forum_threads=get_forum_thread_dict())
 
 
+@app.route("/edit_thread/<int:thread_id>/", methods=[GET, POST])
+def edit_thread(thread_id: int) -> str:
+    """Edit thread."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
+    return render_template("edit_thread.html",
+                           username=session[USERNAME],
+                           ids_and_categories=get_list_of_ids_and_categories(),
+                           thread=get_thread(thread_id))
+
+
+@app.route("/submit_modified_thread/<int:thread_id>/", methods=[GET, POST])
+def submit_modified_thread(thread_id: int) -> str:
+    """Submit modified thread."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+
+    if request.method == 'POST':
+
+        title = request.form.get('title')
+        message = request.form.get('message')
+
+        if not title:
+            flash("Virhe: Otsikko ei voi olla tyhjä.")
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
+
+        if not message:
+            flash("Virhe: Viesti ei voi olla tyhjä.")
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
+
+        if get_username_by_thread_id(thread_id) != session[USERNAME]:
+            flash("Virhe: Väärä käyttäjä.")
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
+
+        update_thread_in_db(thread_id, title, message)
+
+        return render_template(Template.THREAD,
+                               username=session[USERNAME],
+                               thread=get_thread(thread_id))
 
 
 @app.route("/delete_thread/<int:thread_id>/", methods=[GET, POST])
@@ -166,7 +212,7 @@ def reply_form(thread_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template(Template.INDEX)
 
-    return render_template("new_reply.html",
+    return render_template(Template.NEW_REPLY,
                            username=session[USERNAME],
                            thread=get_thread(thread_id))
 
@@ -187,13 +233,54 @@ def submit_reply(thread_id: int) -> str:
                                    username=session[USERNAME],
                                    thread=get_thread(thread_id))
 
-        user_id = get_user_id_by_name()
-        insert_reply_into_db(thread_id, user_id, message)
+        insert_reply_into_db(thread_id, get_users_id(), message)
 
 
     return render_template(Template.THREAD,
                            username=session[USERNAME],
                            thread=get_thread(thread_id))
+
+
+@app.route("/edit_reply/<int:thread_id>/<int:reply_id>", methods=[GET, POST])
+def edit_reply(thread_id: int, reply_id: int) -> str:
+    """Edit Reply."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+
+    reply = get_reply_by_id(reply_id)
+
+    return render_template(Template.EDIT_REPLY,
+                           username=session[USERNAME],
+                           ids_and_categories=get_list_of_ids_and_categories(),
+                           thread=get_thread(thread_id),
+                           reply=reply)
+
+
+@app.route("/submit_modified_reply/<int:thread_id>/<int:reply_id>", methods=[GET, POST])
+def submit_modified_reply(thread_id: int, reply_id: int) -> str:
+    """Submit edited reply from user to the thread."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+
+    if request.method == POST:
+        message = request.form.get('message')
+
+        # Validate input
+        if not message:
+            flash("Virhe: Viesti ei voi olla tyhjä.")
+            return render_template(Template.EDIT_REPLY,
+                                   username=session[USERNAME],
+                                   thread=get_thread(thread_id))
+
+        if get_username_by_reply_id(reply_id) != session[USERNAME]:
+            flash("Virhe: Väärä käyttäjä.")
+            return render_template(Template.THREAD,
+                                   username=session[USERNAME],
+                                   thread=get_thread(thread_id))
+
+        update_reply_in_db(reply_id, message)
+
+        return redirect(f"/thread/{thread_id}")
 
 
 @app.route("/delete_reply/<int:thread_id>/<int:reply_id>/", methods=[GET, POST])
@@ -208,9 +295,7 @@ def delete_reply(thread_id: int, reply_id: int) -> str:
     else:
         flash("Virhe: Väärä käyttäjä.")
 
-    return render_template(Template.THREAD,
-                           username=session[USERNAME],
-                           thread=get_thread(thread_id))
+    return redirect(f"/thread/{thread_id}")
 
 
 ###############################################################################

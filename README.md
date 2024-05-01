@@ -15,8 +15,8 @@
   * [x] Luoda ketjun otsikolla ja aloitusviestillä
   * [x] Kirjoittaa viestin julkisiin ketjuihin
   * [x] Poistaa luomansa ketjun tai viestin
-  * [ ] Muokata otsikkoa ja viestiä 10 minuutin ajan 
-  * [ ] Peukuttaa ketjuja ja viestejä ylös tai alas 
+  * [x] Muokata otsikkoa ja viestiä
+  * [ ] Peukuttaa ketjuja ja viestejä ylös tai alas
   * [ ] Etsiä kaikki viestit, joiden osana on annettu sana
 
 **Ylläpitäjä** 
