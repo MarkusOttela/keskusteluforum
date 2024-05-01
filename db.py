@@ -23,7 +23,10 @@ along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 import datetime
 
 from collections import defaultdict
-from os          import getenv
+from os          import getenv, getrandom
+
+import argon2
+import lorem
 
 from flask            import session
 from flask_sqlalchemy import SQLAlchemy
@@ -106,6 +109,41 @@ def insert_thread_into_db(category_id: int , user_id: int, title: str, message: 
     return thread_id
 
 
+def get_username_by_reply_id(reply_id: int) -> str:
+    """Get username by reply_id."""
+    sql = text("SELECT users.username "
+               "FROM users, replies "
+               "WHERE users.user_id = replies.user_id "
+               "      AND "
+               "      replies.reply_id = :reply_id")
+    username = db.session.execute(sql, {"reply_id": reply_id}).fetchone()[0]
+    return username
+
+def get_username_by_thread_id(thread_id: int) -> str:
+    """Get username by thread_id."""
+    sql = text("SELECT users.username "
+               "FROM users, threads "
+               "WHERE users.user_id = threads.user_id "
+               "      AND "
+               "      threads.thread_id = :thread_id")
+    username = db.session.execute(sql, {"thread_id": thread_id}).fetchone()[0]
+    return username
+
+
+def delete_reply_from_db(reply_id: int) -> None:
+    """Delete reply from database."""
+    sql = text("DELETE FROM replies WHERE replies.reply_id = :reply_id")
+    db.session.execute(sql, {"reply_id": reply_id})
+    db.session.commit()
+
+
+def delete_thread_from_db(thread_id: int) -> None:
+    """Delete thread from database."""
+    sql = text("DELETE FROM threads WHERE threads.thread_id = :thread_id")
+    db.session.execute(sql, {"thread_id": thread_id})
+    db.session.commit()
+
+
 def insert_reply_into_db(thread_id, user_id, message) -> None:
     """Insert reply to replies table."""
     sql = text("INSERT INTO replies (thread_id, user_id, content)"
@@ -180,3 +218,100 @@ def get_forum_thread_dict() -> defaultdict:
             if thread.category_id == category_id:
                 forum_threads[category].append(thread)
     return forum_threads
+
+
+def initialize_db():
+    """Initialise the database."""
+    sql = text("CREATE TABLE IF NOT EXISTS users ("
+               "user_id SERIAL PRIMARY KEY, "
+               "username TEXT, "
+               "join_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "password_hash TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS categories ("
+               "category_id SERIAL PRIMARY KEY, "
+               "name TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS threads ("
+               "thread_id SERIAL PRIMARY KEY, "
+               "category_id INTEGER NOT NULL, "
+               "FOREIGN KEY (category_id) REFERENCES categories(category_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
+               "thread_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "title TEXT,"
+               "content TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS replies ("
+               "reply_id SERIAL PRIMARY KEY, "
+               "thread_id INTEGER NOT NULL, "
+               "FOREIGN KEY (thread_id) REFERENCES threads(thread_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
+               "reply_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "content TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    # Sentinel for checking the databases are filled with mock data only once.
+    sql = text("SELECT password_hash FROM users WHERE username=(:username)")
+    result = db.session.execute(sql, {"username": "User1"}).first()
+    if result is not None:
+        return
+
+    # Populate with test data:
+    users = ["User1", "User2", "User3", "User4", "User5"]
+    for user in users:
+        password_hash = argon2.PasswordHasher().hash(password=user, salt=getrandom(32, flags=0))
+        sql = text("INSERT INTO users (username, password_hash) "
+                   "VALUES (:username, :password_hash)"
+                   "ON CONFLICT DO NOTHING")
+        db.session.execute(sql, {"username": user,
+                                 "password_hash": password_hash})
+        db.session.commit()
+
+    categories = ["Category 1", "Category 2", "Category 3", "Category 4"]
+    for category in categories:
+        sql = text("INSERT INTO categories (name) "
+                   "VALUES (:category) "
+                   "ON CONFLICT DO NOTHING")
+        db.session.execute(sql, {"category": category})
+        db.session.commit()
+
+    sql = text("SELECT category_id FROM categories")
+    category_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+
+    thread_titles = ["Title 1", "Title 2", "Title 3", "Title 4"]
+    sql = text("SELECT user_id FROM users")
+    user_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+    user_id = user_ids[0]
+
+    for category_id in category_ids:
+        for thread_title in thread_titles:
+            sql = text("INSERT INTO threads (category_id, user_id, title, content) "
+                       "VALUES (:category_id, :user_id, :title, :content) "
+                       "ON CONFLICT DO NOTHING")
+            db.session.execute(sql, {"category_id": category_id,
+                                     "user_id": user_id,
+                                     "title": thread_title,
+                                     "content": lorem.sentence()})
+            db.session.commit()
+
+    sql = text("SELECT thread_id FROM threads")
+    thread_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+
+    for thread_id in thread_ids:
+        for user_id in user_ids:
+            sql = text("INSERT INTO replies (thread_id, user_id, content)"
+                       "VALUES (:thread_id, :user_id, :content)"
+                       "ON CONFLICT DO NOTHING")
+            db.session.execute(sql, {"thread_id": thread_id,
+                                     "user_id": user_id,
+                                     "content": lorem.sentence()})
+            db.session.commit()

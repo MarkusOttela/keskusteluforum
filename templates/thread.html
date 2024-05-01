@@ -23,7 +23,12 @@
     <p style="font-size: small;">
         <b>{{thread.username}}</b> ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}}):
     <p>
-    {{thread.content}}
+    {{thread.content}}<br>
+    {% if thread.username == session.username %}
+    <a href="/edit_thread/{{ thread.thread_id }}" class="btn btn-primary">Muokkaa</a>
+    <a href="/delete_thread/{{ thread.thread_id }}" class="btn btn-primary">Poista</a><br>
+    {% endif %}
+
 
     <ul>
     {% for reply in thread.replies %}
@@ -32,6 +37,11 @@
             <b>{{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
         </span>
         {{reply.content}}
+        {% if reply.username == session.username %}
+        <br><a href="/edit_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Muokkaa</a>
+        <a href="/delete_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Poista</a><br>
+        {% endif %}
+
     {% endfor %}
     </ul>
 

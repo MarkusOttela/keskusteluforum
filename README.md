@@ -14,7 +14,7 @@
   * [x] Kirjautua ulos
   * [x] Luoda ketjun otsikolla ja aloitusviestillä
   * [x] Kirjoittaa viestin julkisiin ketjuihin
-  * [ ] Poistaa luomansa ketjun tai viestin
+  * [x] Poistaa luomansa ketjun tai viestin
   * [ ] Muokata otsikkoa ja viestiä 10 minuutin ajan 
   * [ ] Peukuttaa ketjuja ja viestejä ylös tai alas 
   * [ ] Etsiä kaikki viestit, joiden osana on annettu sana
