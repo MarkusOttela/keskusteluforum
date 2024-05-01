@@ -132,13 +132,57 @@ def submit_thread() -> str:
                                thread=get_thread(thread_id))
 
     else:
-        return render_template("index.html", username=session["username"], forum_threads=get_forum_thread_dict())
         return render_template(Template.INDEX,
                                username=session[USERNAME],
                                forum_threads=get_forum_thread_dict())
 
 
+@app.route("/edit_thread/<int:thread_id>/", methods=[GET, POST])
+def edit_thread(thread_id: int) -> str:
+    """Edit thread."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
 
+    return render_template("edit_thread.html",
+                           username=session[USERNAME],
+                           ids_and_categories=get_list_of_ids_and_categories(),
+                           thread=get_thread(thread_id))
+
+
+@app.route("/submit_modified_thread/<int:thread_id>/", methods=[GET, POST])
+def submit_modified_thread(thread_id: int) -> str:
+    """Submit modified thread."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+
+    if request.method == 'POST':
+
+        title = request.form.get('title')
+        message = request.form.get('message')
+
+        if not title:
+            flash("Virhe: Otsikko ei voi olla tyhjä.")
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
+
+        if not message:
+            flash("Virhe: Viesti ei voi olla tyhjä.")
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
+
+        if get_username_by_thread_id(thread_id) != session[USERNAME]:
+            flash("Virhe: Väärä käyttäjä.")
+            return render_template(Template.NEW_THREAD,
+                                   username=session[USERNAME],
+                                   ids_and_categories=get_list_of_ids_and_categories())
+
+        update_thread_in_db(thread_id, title, message)
+
+        return render_template(Template.THREAD,
+                               username=session[USERNAME],
+                               thread=get_thread(thread_id))
 
 
 @app.route("/delete_thread/<int:thread_id>/", methods=[GET, POST])
