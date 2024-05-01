@@ -34,6 +34,7 @@ from db import db, get_thread, get_users_id, insert_reply_into_db, get_forum_thr
     update_thread_in_db, get_reply_by_id, update_reply_in_db, insert_like_to_db, user_has_liked_reply, \
     remove_like_from_db, search_from_db
 
+
 USERNAME = "username"
 POST = "POST"
 GET  = "GET"

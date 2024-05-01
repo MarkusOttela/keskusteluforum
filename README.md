@@ -17,7 +17,7 @@
   * [x] Poistaa luomansa ketjun tai viestin
   * [x] Muokata otsikkoa ja viestiä
   * [x] Peukuttaa viestejä ylös tai alas
-  * [ ] Etsiä kaikki viestit, joiden osana on annettu sana
+  * [x] Etsiä kaikki aiheet, joissa esiintyy haettu annettu sana
 
 **Ylläpitäjä** 
   * [ ] Voi lisätä ja poistaa keskustelualueita

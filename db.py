@@ -223,6 +223,7 @@ def insert_reply_into_db(thread_id, user_id, message) -> None:
                              "content": message})
     db.session.commit()
 
+
 def get_most_recent_post_tstamp_dict() -> dict[int, datetime.datetime]:
     """Get most recent reply from thread."""
     thread_id_dict = dict()
@@ -241,18 +242,31 @@ def get_most_recent_post_tstamp_dict() -> dict[int, datetime.datetime]:
 
     return timestamp_dict
 
+
 def search_from_db(query: str) -> list[int]:
     """Get list of thread ids from database that match a search term."""
     sql = text("SELECT "
                "    threads.thread_id "
                "FROM "
-               "    threads "
+               "    threads, replies "
                "WHERE "
-               "    title LIKE :query "
+               "    threads.title LIKE :query "
                "    OR "
                "    threads.content LIKE :query")
-    return [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
+    thread_ids = [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
 
+    sql = text("SELECT "
+               "    threads.thread_id "
+               "FROM "
+               "    threads, replies "
+               "WHERE "
+               "    replies.content LIKE :query "
+               "    AND "
+               "    replies.thread_id = threads.thread_id"
+               )
+    thread_ids += [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
+
+    return thread_ids
 
 def get_total_post_dict() -> dict[str, int]:
     """Get dict containing {category: total_posts_in_category}."""
