@@ -20,11 +20,7 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import datetime
-import getpass
-
-from collections import defaultdict
-from os          import getenv, getrandom
+from os import getenv, getrandom
 
 import argon2
 import lorem
@@ -35,7 +31,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy       import text
 
 from app         import app
-from src.classes import Thread, Reply
+from src.classes import Thread, Reply, Category
 
 app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
 db = SQLAlchemy(app)
@@ -123,20 +119,19 @@ def mock_db_content():
     sql = text("SELECT category_id FROM categories")
     category_ids = [t[0] for t in db.session.execute(sql).fetchall()]
 
-    thread_titles = ["Title 1", "Title 2", "Title 3", "Title 4"]
     sql = text("SELECT user_id FROM users")
     user_ids = [t[0] for t in db.session.execute(sql).fetchall()]
-    user_id = user_ids[0]
 
     for category_id in category_ids:
-        for thread_title in thread_titles:
+        for _ in range(5):
+
             sql = text("INSERT INTO threads (category_id, user_id, title, content) "
                        "VALUES (:category_id, :user_id, :title, :content) "
                        "ON CONFLICT DO NOTHING")
             db.session.execute(sql, {"category_id": category_id,
-                                     "user_id": user_id,
-                                     "title": thread_title,
-                                     "content": lorem.sentence()})
+                                     "user_id": random.choice(user_ids),
+                                     "title": lorem.sentence(),
+                                     "content": lorem.paragraph()})
             db.session.commit()
 
     sql = text("SELECT thread_id FROM threads")
@@ -170,23 +165,14 @@ def create_admin_account():
     if result is not None:
         return
 
-    while True:
-        password1 = getpass.getpass("Enter admin password: ")
-        password2 = getpass.getpass("Repeat admin password: ")
-        if password1 == password2:
-            password_hash = argon2.PasswordHasher().hash(password=password1, salt=getrandom(32, flags=0))
-            sql = text("INSERT INTO users (username, is_admin, password_hash) "
-                       "VALUES (:username, :is_admin, :password_hash)"
-                       "ON CONFLICT DO NOTHING")
-            db.session.execute(sql, {"username": 'admin',
-                                     "is_admin": True,
-                                     "password_hash": password_hash})
-            db.session.commit()
-            print("Admin account successfully created.")
-            break
-        else:
-            print("Passwords did not match.")
-
+    password_hash = argon2.PasswordHasher().hash(password=getenv('ADMIN_PASSWORD'), salt=getrandom(32, flags=0))
+    sql = text("INSERT INTO users (username, is_admin, password_hash) "
+               "VALUES (:username, :is_admin, :password_hash)"
+               "ON CONFLICT DO NOTHING")
+    db.session.execute(sql, {"username": 'admin',
+                             "is_admin": True,
+                             "password_hash": password_hash})
+    db.session.commit()
 
 def category_exists_in_db(category_name: str) -> bool:
     """Return true if the category exists in the database."""
@@ -253,13 +239,13 @@ def get_thread(thread_id: int) -> Thread:
     for reply_data in replies_data:
         reply = Reply(*reply_data)
         reply.likes = get_reply_likes(reply.reply_id)
-        thread.replies.append(reply)
+        thread.replies[reply.reply_id] = reply
 
     return thread
 
 
 def get_reply_likes(reply_id: int) -> list[int]:
-    """Get list of user ids that have liked the reply matching the reply_id."""
+    """Get list of user_ids that have liked the reply matching the reply_id."""
     sql = text("SELECT user_id FROM likes WHERE reply_id = :reply_id")
     likes_data = db.session.execute(sql, {"reply_id": reply_id}).fetchall()
     likes = [tup[0] for tup in likes_data]
@@ -391,25 +377,6 @@ def insert_reply_into_db(thread_id, user_id, message) -> None:
     db.session.commit()
 
 
-def get_most_recent_post_tstamp_dict() -> dict[int, datetime.datetime]:
-    """Get most recent reply from thread."""
-    thread_id_dict = dict()
-    forum_thread_dict = get_forum_thread_dict()
-    for category, list_of_threads in forum_thread_dict.items():
-        thread_id_dict[category] = [thread.thread_id for thread in list_of_threads]
-
-    timestamp_dict = dict()
-    for category, thread_id_list in thread_id_dict.items():
-        for thread_id in thread_id_list:
-            thread = get_thread(thread_id)
-            try:
-                timestamp_dict[thread_id] = thread.replies[-1].reply_tstamp
-            except IndexError:
-                timestamp_dict[thread_id] = thread.created
-
-    return timestamp_dict
-
-
 def search_from_db(query: str) -> list[int]:
     """Get list of thread ids from database that match a search term."""
     sql = text("SELECT "
@@ -433,28 +400,14 @@ def search_from_db(query: str) -> list[int]:
                )
     thread_ids += [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
 
-    return thread_ids
-
-def get_total_post_dict() -> dict[str, int]:
-    """Get dict containing {category: total_posts_in_category}."""
-    thread_id_dict = dict()
-    forum_thread_dict = get_forum_thread_dict()
-    for category, list_of_threads in forum_thread_dict.items():
-        thread_id_dict[category] = [thread.thread_id for thread in list_of_threads]
-
-    counter_dict = dict()
-    for category, thread_id_list in thread_id_dict.items():
-        counter_dict[category] = 0
-        for thread_id in thread_id_list:
-            counter_dict[category] += len(get_thread(thread_id).replies) + 1
-
-    return counter_dict
+    return list(set(thread_ids))
 
 
-def get_forum_thread_dict() -> defaultdict:
-    """Get forum threads as a {category : [thread1, thread2, ...]} dictionary."""
+def get_forum_category_dict() -> dict[int, Category]:
+    """Get forum categories as a {category_id: Category} dictionary."""
+
     sql = text("SELECT category_id, name FROM categories")
-    ids_and_categories = db.session.execute(sql).fetchall()
+    categories = {id_: Category(id_, name) for id_, name in db.session.execute(sql).fetchall()}
 
     sql = text("SELECT "
                "  threads.thread_id, "
@@ -470,18 +423,12 @@ def get_forum_thread_dict() -> defaultdict:
                "  threads.user_id = users.user_id "
                "ORDER BY thread_tstamp")
 
-    db_data = db.session.execute(sql).fetchall()
-    threads = [Thread(*thread_data) for thread_data in db_data]
-    forum_threads = defaultdict(list)
+    threads = [Thread(*data) for data in db.session.execute(sql).fetchall()]
 
-    for category_id, category in ids_and_categories:
-        for thread in threads:
-            if thread.category_id == category_id:
-                forum_threads[category].append(thread)
+    for thread in threads:
 
-        # Ensures categories with no threads are visible in index.
-        if category not in forum_threads.keys():
-            forum_threads[category] = []
+        for category_id, category in categories.items():
+            if category_id == thread.category_id:
+                category.threads[thread.thread_id] = thread
 
-    return forum_threads
-
+    return categories

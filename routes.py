@@ -28,16 +28,18 @@ from flask      import render_template, request, flash, session, redirect, url_f
 from sqlalchemy import text
 
 from app import app
-from db import db, get_thread, get_users_id, insert_reply_into_db, get_forum_thread_dict, \
-    get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict, get_most_recent_post_tstamp_dict, \
+from db import db, get_thread, get_users_id, insert_reply_into_db, get_forum_category_dict, \
+    get_list_of_ids_and_categories, insert_thread_into_db, \
     create_tables, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db, \
     update_thread_in_db, get_reply_by_id, update_reply_in_db, insert_like_to_db, user_has_liked_reply, \
     remove_like_from_db, search_from_db, mock_db_content, create_admin_account, category_exists_in_db, \
     add_category_to_db
 
 USERNAME = "username"
+ADMIN = "admin"
 POST = "POST"
 GET  = "GET"
+
 
 class Template:
     INDEX          = 'index.html'
@@ -71,9 +73,7 @@ def index() -> str:
 
     return render_template(Template.INDEX,
                            username=session[USERNAME],
-                           forum_threads=get_forum_thread_dict(),
-                           total_post_dict=get_total_post_dict(),
-                           most_recent_post_dict=get_most_recent_post_tstamp_dict())
+                           forum_categories=get_forum_category_dict())
 
 
 ###############################################################################
@@ -85,7 +85,7 @@ def new_category() -> str:
     """Return the create new category page."""
     if not USERNAME in session.keys():
         return render_template(Template.INDEX)
-    if session[USERNAME] != 'admin':
+    if session[USERNAME] != ADMIN:
         flash("You must be an admin to create a new category!")
         return render_template(Template.INDEX)
 
@@ -97,7 +97,7 @@ def create_category() -> str:
     """Createa new category."""
     if not USERNAME in session.keys():
         return render_template(Template.INDEX)
-    if session[USERNAME] != 'admin':
+    if session[USERNAME] != ADMIN:
         flash("You must be an admin to create a new category!")
         return render_template(Template.INDEX)
 
@@ -180,9 +180,7 @@ def submit_thread() -> str:
                                thread=get_thread(thread_id))
 
     else:
-        return render_template(Template.INDEX,
-                               username=session[USERNAME],
-                               forum_threads=get_forum_thread_dict())
+        return redirect(url_for('index'))  # type: ignore
 
 
 @app.route("/edit_thread/<int:thread_id>/", methods=[GET, POST])
@@ -400,13 +398,13 @@ def search_posts() -> str:
         return redirect(url_for('index'))  # type: ignore
 
     else:
-        threads = [get_thread(thread_id) for thread_id in thread_ids]
+        category_dict = get_forum_category_dict()
 
         return render_template(Template.SEARCH_RESULTS,
                                username=session[USERNAME],
                                query=query,
-                               most_recent_post_dict=get_most_recent_post_tstamp_dict(),
-                               threads=threads)
+                               category_dict=category_dict,
+                               thread_ids=thread_ids)
 
 
 ###############################################################################
@@ -430,6 +428,11 @@ def register() -> str:
     # Username validation
     sql    = text("SELECT EXISTS(SELECT 1 FROM users WHERE username=(:username))")
     result = db.session.execute(sql, {USERNAME: username})
+
+    if username == ADMIN:
+        flash('Käyttäjänimi on varattu admineille.')
+        return render_template(Template.NEW_USER)
+
     if result.first()[0]:
         flash('Käyttäjänimi on jo käytössä.')
         return render_template(Template.NEW_USER)

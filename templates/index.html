@@ -31,17 +31,17 @@
         <input type="submit" value="Hae">
     </form>
 
-    {% if forum_threads  %}
-        {% for category, list_of_threads in forum_threads.items() %}
+    {% if forum_categories  %}
+        {% for category_id, category in forum_categories.items() %}
 
-            <h3>{{ category }} ({{list_of_threads|length}} ketjua, {{total_post_dict[category]}} viestiä yhteensä)</h3>
+            <h3>{{ category.name }} ({{category.total_threads()}} ketjua, {{category.total_posts()}} viestiä yhteensä)</h3><a href="/delete_cateory/{{ category_id }}">Poista kategoria</a>
 
-            {% for thread in list_of_threads %}
+            {% for thread in category.threads.values() %}
             <ul class="no-bullet">
                 <li> <a href="/thread/{{ thread.thread_id }}">{{thread.title}}</a>
                     <span style="font-size: small;"><b> - {{thread.username}}</b>
                         ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})
-                        (Tuorein viesti: {{most_recent_post_dict[thread.thread_id].strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
+                        (Tuorein viesti: {{thread.dt_most_recent_post().strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
                 <li class="indented">{{ thread.content|truncate(50, True)}}</li>
             </ul>
             {% endfor %}

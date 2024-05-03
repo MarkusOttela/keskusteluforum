@@ -35,7 +35,7 @@
 
 
     <ul>
-    {% for reply in thread.replies %}
+    {% for reply in thread.replies.values() %}
     <li>
         <span style="font-size: small;">
             <b>{{reply.likes|length}} 👍 {{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>

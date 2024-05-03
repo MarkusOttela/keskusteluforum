@@ -42,7 +42,14 @@ def main() -> None:
     log.setLevel(logging.ERROR)
     cli.show_server_banner = lambda *_: None
 
-    print("Keskusteluforum 0.1 Running in http://127.0.0.1:5000\n")
+    print("\nKeskusteluforum 0.1")
+
+    if getenv("ADMIN_PASSWORD") is None:
+        print("\nError: ADMIN_PASSWORD environment variable must be set.\nExiting.")
+        exit(1)
+
+    print("Server running in http://127.0.0.1:5000\n")
+
     app.run()
 
 

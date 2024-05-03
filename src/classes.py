@@ -23,7 +23,32 @@ along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 import datetime
 
 
+class Category:
+
+    def __init__(self, category_id: int, name: str) -> None:
+        """Create new category object."""
+        self.category_id = category_id
+        self.name = name
+        self.threads : dict[int, Thread] = dict()
+
+    def __repr__(self) -> str:
+        return f"  Category {self.name} (id {self.category_id}, {len(self.threads)} threads)"
+
+    def total_threads(self) -> int:
+        """Return the total number of threads."""
+        return len(self.threads)
+
+    def total_posts(self) -> int:
+        """Return the total number of posts in all posts in the category."""
+        return sum([thread.total_replies() for thread in self.threads.values()])
+
+    def dt_most_recent_post_for_thread(self, thread_id: int) -> datetime:
+        """Return the timestamp most recent post in a specified thread."""
+        return self.threads[thread_id].dt_most_recent_post()
+
+
 class Thread:
+
     def __init__(self,
                  thread_id:   int,
                  category_id: int,
@@ -40,20 +65,33 @@ class Thread:
         self.created = created
         self.title = title
         self.content = content
-        self.replies : list[Reply] = []
+        self.replies : dict[int, Reply] = dict()
+
+    def total_replies(self) -> int:
+        """Return the total number of replies.
+
+        +1 accounts for OP's post in the thread.
+        """
+        return len(self.replies) + 1
 
     def __repr__(self) -> str:
         return f"  {self.title} (Thread by {self.username}, created on {self.created})\n    {self.content}"
 
+    def dt_most_recent_post(self) -> datetime:
+        """Return the timestamp most recent post in the thread."""
+        if not self.replies:
+            return self.created
+        return self.replies[-1].reply_tstamp
 
 class Reply:
+
     def __init__(self,
                  reply_id     : int,
                  thread_id    : int,
                  user_id      : int,
                  username     : str,
                  reply_tstamp : datetime,
-                 content      : int
+                 content      : int,
                  ) -> None:
         """Creat new Reply object."""
         self.reply_id = reply_id
