@@ -32,6 +32,7 @@ from sqlalchemy       import text
 
 from app         import app
 from src.classes import Thread, Reply, Category, Like
+from src.statics import ADMIN
 
 app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
 db = SQLAlchemy(app)
@@ -52,9 +53,20 @@ def create_tables():
     db.session.execute(sql)
     db.session.commit()
 
+
     sql = text("CREATE TABLE IF NOT EXISTS categories ("
                "  category_id SERIAL PRIMARY KEY, "
+               "  restricted BOOLEAN DEFAULT FALSE, "
                "  name TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS permissions ("
+               "  permission_id SERIAL PRIMARY KEY, "
+               "  user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
+               "  category_id INTEGER NOT NULL, "
+               "FOREIGN KEY (category_id) REFERENCES categories(category_id))")
     db.session.execute(sql)
     db.session.commit()
 
@@ -192,6 +204,17 @@ def get_user_id_by_username(username: str) -> int:
     return user_id
 
 
+def get_user_ids_and_names(include_admin: bool = False) -> tuple[int, str]:
+    """Get users' user_ids and names."""
+    sql = text("SELECT user_id, username FROM users")
+    results = db.session.execute(sql).fetchall()
+
+    if not include_admin:
+        results = [t for t in results if t[1] != ADMIN]
+
+    return results
+
+
 def get_username_by_reply_id(reply_id: int) -> str:
     """Get username by reply_id."""
     sql = text("SELECT users.username "
@@ -220,13 +243,14 @@ def get_username_by_thread_id(thread_id: int) -> str:
 #                                  CATEGORIES                                 #
 ###############################################################################
 
-def insert_category_to_db(category_name: str) -> int:
+def insert_category_to_db(category_name: str, restricted: bool = False) -> int:
     """Add a new category to the database. Return category_id"""
-    sql = text("INSERT INTO categories (name) "
-               "VALUES (:category_name) "
+    sql = text("INSERT INTO categories (name, restricted) "
+               "VALUES (:category_name, :restricted) "
                "ON CONFLICT DO NOTHING "
                "RETURNING category_id")
-    category_id = db.session.execute(sql, {"category_name": category_name}).fetchone()[0]
+    category_id = db.session.execute(sql, {"category_name": category_name,
+                                           "restricted": restricted}).fetchone()[0]
 
     db.session.commit()
     return category_id
@@ -255,6 +279,13 @@ def get_list_of_category_ids_and_names() -> list[tuple[int, str]]:
     ids_and_categories = db.session.execute(sql).fetchall()
     return ids_and_categories
 
+def get_category_data() -> list[tuple[int, str]]:
+    """Get category data."""
+    sql = text("SELECT category_id, restricted, name "
+               "FROM categories")
+    ids_and_categories = db.session.execute(sql).fetchall()
+    return ids_and_categories
+
 
 def get_list_of_thread_ids_by_category_id(category_id: int) -> list[int]:
     """Get list of thread ids from database that match category id."""
@@ -263,6 +294,32 @@ def get_list_of_thread_ids_by_category_id(category_id: int) -> list[int]:
                "WHERE threads.category_id = :category_id")
     thread_ids = [t[0] for t in db.session.execute(sql, {"category_id": category_id}).fetchall()]
     return thread_ids
+
+
+###############################################################################
+#                                 PERMISSIONS                                 #
+###############################################################################
+
+def insert_permission_into_db(category_id: int, user_id: int) -> int:
+    """Insert permission into database.
+
+    The permission controls whether a user is allowed to access a category.
+    """
+    sql = text("INSERT INTO permissions (user_id, category_id)"
+               "VALUES (:user_id, :category_id)"
+               "ON CONFLICT DO NOTHING "
+               "RETURNING permission_id")
+    permission_id = db.session.execute(sql, {"user_id": user_id,
+                                             "category_id": category_id}).fetchone()[0]
+    db.session.commit()
+    return permission_id
+
+
+def user_has_permission_to_category(category_id: int, user_id: int) -> bool:
+    """Return True if user has permission to access the category."""
+    sql = text("SELECT user_id FROM permissions WHERE category_id = :category_id ")
+    permission_ids = [t[0] for t in db.session.execute(sql, {"category_id": category_id}).fetchall()]
+    return user_id in permission_ids
 
 
 ###############################################################################
@@ -468,10 +525,9 @@ def search_from_db(query: str) -> list[int]:
 
 def get_forum_category_dict() -> dict[int, Category]:
     """Get forum categories as a {category_id: Category} dictionary."""
-
     forum_category_dict = {}
-    for category_id, name in get_list_of_category_ids_and_names():
-        category = Category(category_id, name)
+    for category_id, is_restricted, name in get_category_data():
+        category = Category(category_id, is_restricted, name)
 
         for thread_id in get_list_of_thread_ids_by_category_id(category_id):
             thread = get_thread_by_thread_id(thread_id)

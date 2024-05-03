@@ -9,7 +9,7 @@
 
 <h1>Keskusteluforum</h1>
 
-<h2>Lisää kategoria</h2>
+<h2>Luo uusi kategoria</h2>
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}
@@ -21,9 +21,22 @@
   {% endif %}
 {% endwith %}
 
-<form action="/create_category" method="GET">
-    Kategorian nimi: <input type="text" name="category_name">
+
+<form action="/create_category" method="POST">
+    Kategorian nimi:<br>
+    <input type="text" name="category_name">
+    <p>Kategorian käyttäjät:<br>
+    <br><input type="checkbox" name="all" value="all"> kaikki
+
+    <p>
+    Tai mukauta:
+    {% for user_id, username in user_ids_and_names %}
+        <input type="checkbox" name="sel_users" value="{{user_id}}"> {{username}}
+    {% endfor %}
+
+    <p>
     <input type="submit" value="Luo">
+
 </form>
 
 </body>

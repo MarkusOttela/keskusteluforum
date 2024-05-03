@@ -31,12 +31,14 @@ from app import app
 
 from src.db import (db, create_tables, mock_db_content,
                     insert_admin_account_into_db, insert_new_user_into_db,
-                    get_user_id_for_session, get_username_by_reply_id, get_username_by_thread_id,
-                    insert_category_to_db, delete_category_from_db, category_exists_in_db, get_list_of_category_ids_and_names,
+                    get_user_id_for_session, get_user_ids_and_names, get_username_by_reply_id,
+                    get_username_by_thread_id,
+                    insert_category_to_db, delete_category_from_db, category_exists_in_db,
+                    get_list_of_category_ids_and_names,
                     insert_thread_into_db, update_thread_in_db, delete_thread_from_db, get_thread_by_thread_id,
                     insert_reply_into_db, update_reply_in_db, delete_reply_from_db, get_reply_by_id,
                     insert_like_to_db, delete_like_from_db, user_has_liked_reply,
-                    search_from_db, get_forum_category_dict)
+                    search_from_db, get_forum_category_dict, insert_permission_into_db, user_has_permission_to_category)
 
 
 ###############################################################################
@@ -60,6 +62,7 @@ def index() -> str:
 
     return render_template('index.html',
                            username=session[USERNAME],
+                           user_id=get_user_id_for_session(),
                            forum_categories=get_forum_category_dict())
 
 
@@ -73,22 +76,24 @@ def new_category() -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
-        flash("You must be an admin to create a new category!")
+        flash("Vain adminit voivat luoda kategorioita!")
         return render_template('index.html')
 
-    return render_template('new_category.html')
+    user_ids_and_names = get_user_ids_and_names()
+
+    return render_template('new_category.html', user_ids_and_names=user_ids_and_names)
 
 
-@app.route("/create_category")
+@app.route("/create_category", methods=["GET", "POST"])
 def create_category() -> str:
     """Createa new category."""
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
-        flash("You must be an admin to create a new category!")
+        flash("Vain adminit voivat luoda kategorioita!")
         return render_template('index.html')
 
-    category_name = request.args["category_name"]
+    category_name = request.form.get("category_name")
 
     if not category_name:
         flash("Anna kategorialle nimi.")
@@ -98,7 +103,19 @@ def create_category() -> str:
         flash("Kategoria on jo olemassa.")
         return redirect(url_for('new_category'))  # type: ignore
 
-    insert_category_to_db(category_name)
+    all_users = request.form.get('all')
+    sel_users = request.form.getlist('sel_users')
+
+    if all_users is None and not sel_users:
+        flash("Valitse kategorian näkyvyys.")
+        return redirect(url_for('new_category'))  # type: ignore
+
+    category_id = insert_category_to_db(category_name, restricted=all_users is None)
+
+    if all_users is None and sel_users:
+        for user_id in sel_users:
+            insert_permission_into_db(category_id, int(user_id))
+
     flash(f"Uusi kategoria '{category_name}' luotu")
     return redirect(url_for('index'))  # type: ignore
 
@@ -109,7 +126,7 @@ def delete_category(category_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
-        flash("You must be an admin to create a new category!")
+        flash("Vain adminit voivat luoda kategorioita!")
         return render_template('index.html')
 
     categories = get_forum_category_dict()
@@ -136,6 +153,12 @@ def delete_category(category_id: int) -> str:
 def thread(thread_id: int) -> str:
     """Return thread page matching the given thread_id."""
     if not USERNAME in session.keys():
+        return render_template('index.html')
+
+    category_id = get_thread_by_thread_id(thread_id).category_id
+
+    if session[USERNAME] != ADMIN and not user_has_permission_to_category(category_id, get_user_id_for_session()):
+        flash("Sinulla ei ole pääsyä ketjuun.")
         return render_template('index.html')
 
     return render_template('thread.html',
@@ -172,6 +195,8 @@ def submit_thread() -> str:
             return render_template('new_thread.html',
                                    username=session[USERNAME],
                                    ids_and_categories=get_list_of_category_ids_and_names())
+
+
 
         if not title:
             flash("Virhe: Otsikko ei voi olla tyhjä.")

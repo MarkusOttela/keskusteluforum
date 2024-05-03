@@ -25,9 +25,10 @@ import datetime
 
 class Category:
 
-    def __init__(self, category_id: int, name: str) -> None:
+    def __init__(self, category_id: int, is_restricted: bool, name: str) -> None:
         """Create new category object."""
         self.category_id = category_id
+        self.is_restricted = is_restricted
         self.name = name
         self.threads : dict[int, Thread] = dict()
 
@@ -41,6 +42,11 @@ class Category:
     def total_posts(self) -> int:
         """Return the total number of posts in all posts in the category."""
         return sum([thread.total_replies() for thread in self.threads.values()])
+
+    def user_has_permission(self, user_id: int) -> bool:
+        """Return True if the user has the permission to view the category."""
+        from src.db import user_has_permission_to_category
+        return user_has_permission_to_category(self.category_id, user_id)
 
     def dt_most_recent_post_for_thread(self, thread_id: int) -> datetime:
         """Return the timestamp most recent post in a specified thread."""
