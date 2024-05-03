@@ -21,6 +21,7 @@ along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import datetime
+import getpass
 
 from collections import defaultdict
 from os          import getenv, getrandom
@@ -38,6 +39,172 @@ from src.classes import Thread, Reply
 
 app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
 db = SQLAlchemy(app)
+
+
+def create_tables():
+    """Initialise the database by creating the tables."""
+    sql = text("CREATE TABLE IF NOT EXISTS users ("
+               "user_id SERIAL PRIMARY KEY, "
+               "username TEXT, "
+               "join_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "is_admin BOOLEAN DEFAULT FALSE, "
+               "password_hash TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS categories ("
+               "category_id SERIAL PRIMARY KEY, "
+               "name TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS threads ("
+               "thread_id SERIAL PRIMARY KEY, "
+               "category_id INTEGER NOT NULL, "
+               "FOREIGN KEY (category_id) REFERENCES categories(category_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
+               "thread_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "title TEXT,"
+               "content TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS replies ("
+               "reply_id SERIAL PRIMARY KEY, "
+               "thread_id INTEGER NOT NULL, "
+               "FOREIGN KEY (thread_id) REFERENCES threads(thread_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
+               "reply_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+               "content TEXT)")
+    db.session.execute(sql)
+    db.session.commit()
+
+    sql = text("CREATE TABLE IF NOT EXISTS likes ("
+               "like_id SERIAL PRIMARY KEY, "
+               "reply_id INTEGER NOT NULL, "
+               "FOREIGN KEY (reply_id) REFERENCES replies(reply_id), "
+               "user_id INTEGER NOT NULL, "
+               "FOREIGN KEY (user_id) REFERENCES users(user_id))")
+    db.session.execute(sql)
+    db.session.commit()
+
+
+def mock_db_content():
+    """Mock db content for testing."""
+
+    # Sentinel for checking the databases are filled with mock data only once.
+    sql = text("SELECT password_hash FROM users WHERE username=(:username)")
+    result = db.session.execute(sql, {"username": "User1"}).first()
+    if result is not None:
+        return
+
+    # Populate with test data:
+    users = ["User1", "User2", "User3", "User4", "User5"]
+    for user in users:
+        password_hash = argon2.PasswordHasher().hash(password=user, salt=getrandom(32, flags=0))
+        sql = text("INSERT INTO users (username, is_admin, password_hash) "
+                   "VALUES (:username, :is_admin, :password_hash)"
+                   "ON CONFLICT DO NOTHING")
+        db.session.execute(sql, {"username": user,
+                                 "is_admin": False,
+                                 "password_hash": password_hash})
+        db.session.commit()
+
+    categories = ["Category 1", "Category 2", "Category 3", "Category 4"]
+    for category in categories:
+        sql = text("INSERT INTO categories (name) "
+                   "VALUES (:category) "
+                   "ON CONFLICT DO NOTHING")
+        db.session.execute(sql, {"category": category})
+        db.session.commit()
+
+    sql = text("SELECT category_id FROM categories")
+    category_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+
+    thread_titles = ["Title 1", "Title 2", "Title 3", "Title 4"]
+    sql = text("SELECT user_id FROM users")
+    user_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+    user_id = user_ids[0]
+
+    for category_id in category_ids:
+        for thread_title in thread_titles:
+            sql = text("INSERT INTO threads (category_id, user_id, title, content) "
+                       "VALUES (:category_id, :user_id, :title, :content) "
+                       "ON CONFLICT DO NOTHING")
+            db.session.execute(sql, {"category_id": category_id,
+                                     "user_id": user_id,
+                                     "title": thread_title,
+                                     "content": lorem.sentence()})
+            db.session.commit()
+
+    sql = text("SELECT thread_id FROM threads")
+    thread_ids = [t[0] for t in db.session.execute(sql).fetchall()]
+
+    for thread_id in thread_ids:
+        for user_id in user_ids:
+            sql = text("INSERT INTO replies (thread_id, user_id, content)"
+                       "VALUES (:thread_id, :user_id, :content)"
+                       "ON CONFLICT DO NOTHING "
+                       "RETURNING reply_id")
+
+            reply_id = db.session.execute(sql, {"thread_id": thread_id,
+                                     "user_id": user_id,
+                                     "content": lorem.sentence()}).fetchone()[0]
+
+            # 50% probability to like the reply of other posters
+            for user_id_ in user_ids:
+                if user_id_ == user_id and random.randint(0, 1):
+                    continue
+                sql = text("INSERT INTO likes (reply_id, user_id) VALUES (:reply_id, :user_id)")
+                db.session.execute(sql, {"reply_id": reply_id, "user_id": user_id_})
+
+            db.session.commit()
+
+
+def create_admin_account():
+    """Create the administrator account."""
+    sql = text("SELECT password_hash FROM users WHERE username=(:username)")
+    result = db.session.execute(sql, {"username": "admin"}).first()
+    if result is not None:
+        return
+
+    while True:
+        password1 = getpass.getpass("Enter admin password: ")
+        password2 = getpass.getpass("Repeat admin password: ")
+        if password1 == password2:
+            password_hash = argon2.PasswordHasher().hash(password=password1, salt=getrandom(32, flags=0))
+            sql = text("INSERT INTO users (username, is_admin, password_hash) "
+                       "VALUES (:username, :is_admin, :password_hash)"
+                       "ON CONFLICT DO NOTHING")
+            db.session.execute(sql, {"username": 'admin',
+                                     "is_admin": True,
+                                     "password_hash": password_hash})
+            db.session.commit()
+            print("Admin account successfully created.")
+            break
+        else:
+            print("Passwords did not match.")
+
+
+def category_exists_in_db(category_name: str) -> bool:
+    """Return true if the category exists in the database."""
+    sql = text("SELECT category_id FROM categories where name=:category")
+    result = db.session.execute(sql, {"category": category_name}).fetchall()
+    if result:
+        return True
+    return False
+
+
+def add_category_to_db(category_name: str) -> None:
+    """Add category to database."""
+    sql = text("INSERT INTO categories (name)"
+               "VALUES (:category_name)"
+               "ON CONFLICT DO NOTHING ")
+    db.session.execute(sql, {"category_name": category_name})
+    db.session.commit()
+
 
 def get_list_of_ids_and_categories() -> list[tuple[int, str]]:
     """Get list of categories (id and string)."""
@@ -270,7 +437,6 @@ def search_from_db(query: str) -> list[int]:
 
 def get_total_post_dict() -> dict[str, int]:
     """Get dict containing {category: total_posts_in_category}."""
-
     thread_id_dict = dict()
     forum_thread_dict = get_forum_thread_dict()
     for category, list_of_threads in forum_thread_dict.items():
@@ -312,120 +478,10 @@ def get_forum_thread_dict() -> defaultdict:
         for thread in threads:
             if thread.category_id == category_id:
                 forum_threads[category].append(thread)
+
+        # Ensures categories with no threads are visible in index.
+        if category not in forum_threads.keys():
+            forum_threads[category] = []
+
     return forum_threads
 
-
-def initialize_db():
-    """Initialise the database."""
-    sql = text("CREATE TABLE IF NOT EXISTS users ("
-               "user_id SERIAL PRIMARY KEY, "
-               "username TEXT, "
-               "join_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-               "password_hash TEXT)")
-    db.session.execute(sql)
-    db.session.commit()
-
-    sql = text("CREATE TABLE IF NOT EXISTS categories ("
-               "category_id SERIAL PRIMARY KEY, "
-               "name TEXT)")
-    db.session.execute(sql)
-    db.session.commit()
-
-    sql = text("CREATE TABLE IF NOT EXISTS threads ("
-               "thread_id SERIAL PRIMARY KEY, "
-               "category_id INTEGER NOT NULL, "
-               "FOREIGN KEY (category_id) REFERENCES categories(category_id), "
-               "user_id INTEGER NOT NULL, "
-               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
-               "thread_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-               "title TEXT,"
-               "content TEXT)")
-    db.session.execute(sql)
-    db.session.commit()
-
-    sql = text("CREATE TABLE IF NOT EXISTS replies ("
-               "reply_id SERIAL PRIMARY KEY, "
-               "thread_id INTEGER NOT NULL, "
-               "FOREIGN KEY (thread_id) REFERENCES threads(thread_id), "
-               "user_id INTEGER NOT NULL, "
-               "FOREIGN KEY (user_id) REFERENCES users(user_id), "
-               "reply_tstamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, "
-               "content TEXT)")
-    db.session.execute(sql)
-    db.session.commit()
-
-    sql = text("CREATE TABLE IF NOT EXISTS likes ("
-               "like_id SERIAL PRIMARY KEY, "
-               "reply_id INTEGER NOT NULL, "
-               "FOREIGN KEY (reply_id) REFERENCES replies(reply_id), "
-               "user_id INTEGER NOT NULL, "
-               "FOREIGN KEY (user_id) REFERENCES users(user_id))")
-    db.session.execute(sql)
-    db.session.commit()
-
-    # Sentinel for checking the databases are filled with mock data only once.
-    sql = text("SELECT password_hash FROM users WHERE username=(:username)")
-    result = db.session.execute(sql, {"username": "User1"}).first()
-    if result is not None:
-        return
-
-    # Populate with test data:
-    users = ["User1", "User2", "User3", "User4", "User5"]
-    for user in users:
-        password_hash = argon2.PasswordHasher().hash(password=user, salt=getrandom(32, flags=0))
-        sql = text("INSERT INTO users (username, password_hash) "
-                   "VALUES (:username, :password_hash)"
-                   "ON CONFLICT DO NOTHING")
-        db.session.execute(sql, {"username": user,
-                                 "password_hash": password_hash})
-        db.session.commit()
-
-    categories = ["Category 1", "Category 2", "Category 3", "Category 4"]
-    for category in categories:
-        sql = text("INSERT INTO categories (name) "
-                   "VALUES (:category) "
-                   "ON CONFLICT DO NOTHING")
-        db.session.execute(sql, {"category": category})
-        db.session.commit()
-
-    sql = text("SELECT category_id FROM categories")
-    category_ids = [t[0] for t in db.session.execute(sql).fetchall()]
-
-    thread_titles = ["Title 1", "Title 2", "Title 3", "Title 4"]
-    sql = text("SELECT user_id FROM users")
-    user_ids = [t[0] for t in db.session.execute(sql).fetchall()]
-    user_id = user_ids[0]
-
-    for category_id in category_ids:
-        for thread_title in thread_titles:
-            sql = text("INSERT INTO threads (category_id, user_id, title, content) "
-                       "VALUES (:category_id, :user_id, :title, :content) "
-                       "ON CONFLICT DO NOTHING")
-            db.session.execute(sql, {"category_id": category_id,
-                                     "user_id": user_id,
-                                     "title": thread_title,
-                                     "content": lorem.sentence()})
-            db.session.commit()
-
-    sql = text("SELECT thread_id FROM threads")
-    thread_ids = [t[0] for t in db.session.execute(sql).fetchall()]
-
-    for thread_id in thread_ids:
-        for user_id in user_ids:
-            sql = text("INSERT INTO replies (thread_id, user_id, content)"
-                       "VALUES (:thread_id, :user_id, :content)"
-                       "ON CONFLICT DO NOTHING "
-                       "RETURNING reply_id")
-
-            reply_id = db.session.execute(sql, {"thread_id": thread_id,
-                                     "user_id": user_id,
-                                     "content": lorem.sentence()}).fetchone()[0]
-
-            # 50% probability to like the reply of other posters
-            for user_id_ in user_ids:
-                if user_id_ == user_id and random.randint(0, 1):
-                    continue
-                sql = text("INSERT INTO likes (reply_id, user_id) VALUES (:reply_id, :user_id)")
-                db.session.execute(sql, {"reply_id": reply_id, "user_id": user_id_})
-
-            db.session.commit()

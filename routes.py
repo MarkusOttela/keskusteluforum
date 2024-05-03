@@ -30,10 +30,10 @@ from sqlalchemy import text
 from app import app
 from db import db, get_thread, get_users_id, insert_reply_into_db, get_forum_thread_dict, \
     get_list_of_ids_and_categories, insert_thread_into_db, get_total_post_dict, get_most_recent_post_tstamp_dict, \
-    initialize_db, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db, \
+    create_tables, get_username_by_reply_id, delete_reply_from_db, get_username_by_thread_id, delete_thread_from_db, \
     update_thread_in_db, get_reply_by_id, update_reply_in_db, insert_like_to_db, user_has_liked_reply, \
-    remove_like_from_db, search_from_db
-
+    remove_like_from_db, search_from_db, mock_db_content, create_admin_account, category_exists_in_db, \
+    add_category_to_db
 
 USERNAME = "username"
 POST = "POST"
@@ -42,6 +42,7 @@ GET  = "GET"
 class Template:
     INDEX          = 'index.html'
     THREAD         = 'thread.html'
+    NEW_CATEGORY   = 'new_category.html'
     NEW_THREAD     = 'new_thread.html'
     NEW_USER       = 'new_user.html'
     NEW_REPLY      = 'new_reply.html'
@@ -54,10 +55,12 @@ class Template:
 ###############################################################################
 
 @app.before_request
-def create_tables():
+def init_db():
     """Initialize the database tables."""
-    app.before_request_funcs[None].remove(create_tables)  # Run only on first request
-    initialize_db()
+    app.before_request_funcs[None].remove(init_db)  # Run only on first request
+    create_tables()
+    mock_db_content()
+    create_admin_account()
 
 
 @app.route("/")
@@ -71,6 +74,46 @@ def index() -> str:
                            forum_threads=get_forum_thread_dict(),
                            total_post_dict=get_total_post_dict(),
                            most_recent_post_dict=get_most_recent_post_tstamp_dict())
+
+
+###############################################################################
+#                                  CATEGORIES                                 #
+###############################################################################
+
+@app.route("/new_category")
+def new_category() -> str:
+    """Return the create new category page."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+    if session[USERNAME] != 'admin':
+        flash("You must be an admin to create a new category!")
+        return render_template(Template.INDEX)
+
+    return render_template(Template.NEW_CATEGORY)
+
+
+@app.route("/create_category")
+def create_category() -> str:
+    """Createa new category."""
+    if not USERNAME in session.keys():
+        return render_template(Template.INDEX)
+    if session[USERNAME] != 'admin':
+        flash("You must be an admin to create a new category!")
+        return render_template(Template.INDEX)
+
+    category_name = request.args["category_name"]
+
+    if not category_name:
+        flash("Anna kategorialle nimi.")
+        return redirect(url_for('new_category'))  # type: ignore
+
+    if category_exists_in_db(category_name):
+        flash("Kategoria on jo olemassa.")
+        return redirect(url_for('new_category'))  # type: ignore
+
+    add_category_to_db(category_name)
+    flash(f"Uusi kategoria '{category_name}' luotu")
+    return redirect(url_for('index'))  # type: ignore
 
 
 ###############################################################################
@@ -106,7 +149,7 @@ def submit_thread() -> str:
     if not USERNAME in session.keys():
         return render_template(Template.INDEX)
 
-    if request.method == 'POST':
+    if request.method == POST:
         category_id = request.form.get('category_id')
         title       = request.form.get('title')
         message     = request.form.get('message')
@@ -160,7 +203,7 @@ def submit_modified_thread(thread_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template(Template.INDEX)
 
-    if request.method == 'POST':
+    if request.method == POST:
 
         title = request.form.get('title')
         message = request.form.get('message')

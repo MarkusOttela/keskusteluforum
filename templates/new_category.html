@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Uusi kategoria</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h1>Keskusteluforum</h1>
+
+<h2>Lisää kategoria</h2>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+<form action="/create_category" method="GET">
+    Kategorian nimi: <input type="text" name="category_name">
+    <input type="submit" value="Luo">
+</form>
+
+</body>
+</html>

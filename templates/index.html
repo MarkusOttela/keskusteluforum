@@ -22,7 +22,8 @@
 {% if session.username %}
     Tervetuloa {{ session.username }}!
 
-    <p><a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
+    <p><a href="{{url_for('new_category')}}" class="btn btn-primary">Uusi kategoria</a>
+    <a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
     <a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
 
     <form action="/search_posts" method="GET">
