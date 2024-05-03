@@ -81,7 +81,7 @@ class Thread:
         """Return the timestamp most recent post in the thread."""
         if not self.replies:
             return self.created
-        return self.replies[-1].reply_tstamp
+        return list(self.replies.values())[-1].reply_tstamp
 
 class Reply:
 
@@ -100,8 +100,22 @@ class Reply:
         self.username = username
         self.reply_tstamp = reply_tstamp
         self.content = content
-        self.likes = []
+        self.likes : list[Like] = []
 
     def __repr__(self) -> str:
         return (f"      {self.username}  ({self.reply_tstamp})\n"
                 f"        {self.content}")
+
+    def has_been_liked_by(self, user_id: int) -> bool:
+        """Check if a user has liked this reply."""
+        from db import user_has_liked_reply
+        return user_has_liked_reply(user_id, self.reply_id)
+
+
+class Like:
+
+    def __init__(self, like_id: int, user_id: int, reply_id: int) -> None:
+        """Create new Like object."""
+        self.like_id = like_id
+        self.user_id = user_id
+        self.reply_id = reply_id

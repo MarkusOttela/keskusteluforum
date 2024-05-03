@@ -34,7 +34,7 @@
     {% if forum_categories  %}
         {% for category_id, category in forum_categories.items() %}
 
-            <h3>{{ category.name }} ({{category.total_threads()}} ketjua, {{category.total_posts()}} viestiä yhteensä)</h3><a href="/delete_cateory/{{ category_id }}">Poista kategoria</a>
+            <h3>{{ category.name }} ({{category.total_threads()}} ketjua, {{category.total_posts()}} viestiä yhteensä)</h3><a href="/delete_category/{{ category_id }}">Poista kategoria</a>
 
             {% for thread in category.threads.values() %}
             <ul class="no-bullet">

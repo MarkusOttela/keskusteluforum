@@ -45,7 +45,7 @@
             <br><a href="/edit_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Muokkaa</a>
             <a href="/delete_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Poista</a><br>
         {%else%}
-            {%if user_id not in reply.likes %}
+            {%if not reply.has_been_liked_by(user_id) %}
             <br><a href="/like_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Tykkää</a>
             {%else%}
             <br><a href="/unlike_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Älä tykkää</a>
