@@ -344,6 +344,7 @@ def insert_reply_into_db(thread_id: int, user_id: int, content: str) -> int:
     db.session.commit()
     return reply_id
 
+
 def update_reply_in_db(reply_id: int, message: str) -> None:
     """Update reply in database."""
     sql = text("UPDATE replies "
