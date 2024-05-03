@@ -442,6 +442,8 @@ def get_likes_by_reply_id(reply_id: int) -> dict[int, Like]:
 
 def search_from_db(query: str) -> list[int]:
     """Get list of thread ids from database that match a search term."""
+
+    # Search threads (title and content of OP's message)
     sql = text("SELECT threads.thread_id "
                "FROM threads, replies "
                "WHERE "
@@ -450,6 +452,7 @@ def search_from_db(query: str) -> list[int]:
                "  threads.content LIKE :query")
     thread_ids = [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
 
+    # Search content of replies
     sql = text("SELECT threads.thread_id "
                "FROM threads, replies "
                "WHERE "

@@ -122,19 +122,16 @@ def delete_category(category_id: int) -> str:
     if session[USERNAME] != ADMIN:
         flash("You must be an admin to create a new category!")
         return render_template(Template.INDEX)
+
     categories = get_forum_category_dict()
 
     category = categories[category_id]
 
-    for thread_id in category.threads.keys():
-        thread = get_thread_by_thread_id(thread_id)
-
-        for reply_id in thread.replies.keys():
-            reply = get_reply_by_id(reply_id)
-
-            for like in reply.likes:
+    for thread in category.threads.values():
+        for reply in thread.replies.values():
+            for like in reply.likes.values():
                 delete_like_from_db(like.user_id, like.reply_id)
-            delete_reply_from_db(reply_id)
+            delete_reply_from_db(reply.reply_id)
         delete_thread_from_db(thread.thread_id)
     delete_category_from_db(category_id)
 

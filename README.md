@@ -20,5 +20,5 @@
   * [x] Etsiä kaikki aiheet, joissa esiintyy haettu annettu sana
 
 **Ylläpitäjä** 
-  * [ ] Voi lisätä ja poistaa keskustelualueita
+  * [x] Voi lisätä ja poistaa keskustelualueita
   * [ ] Voi luoda yksityisen alueen valituille jäsenille

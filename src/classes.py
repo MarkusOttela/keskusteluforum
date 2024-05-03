@@ -100,7 +100,7 @@ class Reply:
         self.username = username
         self.reply_tstamp = reply_tstamp
         self.content = content
-        self.likes : list[Like] = []
+        self.likes : dict[int, Like] = dict()
 
     def __repr__(self) -> str:
         return (f"      {self.username}  ({self.reply_tstamp})\n"
