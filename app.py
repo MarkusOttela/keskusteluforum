@@ -24,7 +24,7 @@ import logging
 
 from dotenv import load_dotenv
 from flask  import cli, Flask
-from os     import getenv
+from os     import environ, getenv
 
 app = Flask(__name__)
 
@@ -32,6 +32,12 @@ from routes import *
 
 # Set environment
 load_dotenv('.env')
+
+for key in ['DATABASE_URL', 'SECRET_KEY', 'ADMIN_PASSWORD']:
+    if key not in environ or getenv(key) == '':
+        print(f"Error: Missing environment variable {key}")
+        exit(1)
+
 app.secret_key = getenv("SECRET_KEY")
 
 
@@ -43,11 +49,6 @@ def main() -> None:
     cli.show_server_banner = lambda *_: None
 
     print("\nKeskusteluforum 0.1")
-
-    if getenv("ADMIN_PASSWORD") is None:
-        print("\nError: ADMIN_PASSWORD environment variable must be set.\nExiting.")
-        exit(1)
-
     print("Server running in http://127.0.0.1:5000\n")
 
     app.run()
