@@ -108,7 +108,7 @@ class Reply:
 
     def has_been_liked_by(self, user_id: int) -> bool:
         """Check if a user has liked this reply."""
-        from db import user_has_liked_reply
+        from src.db import user_has_liked_reply
         return user_has_liked_reply(user_id, self.reply_id)
 
 

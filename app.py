@@ -28,7 +28,7 @@ from os     import environ, getenv
 
 app = Flask(__name__)
 
-from routes import *
+from src.routes import *
 
 # Set environment
 load_dotenv('.env')

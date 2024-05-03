@@ -28,14 +28,15 @@ from sqlalchemy import text
 from src.statics import USERNAME, ADMIN, GET, POST
 
 from app import app
-from db import (db, create_tables, mock_db_content,
-                insert_admin_account_into_db, insert_new_user_into_db,
-                get_user_id_for_session, get_username_by_reply_id, get_username_by_thread_id,
-                insert_category_to_db, delete_category_from_db, category_exists_in_db, get_list_of_category_ids_and_names,
-                insert_thread_into_db, update_thread_in_db, delete_thread_from_db, get_thread_by_thread_id,
-                insert_reply_into_db, update_reply_in_db, delete_reply_from_db, get_reply_by_id,
-                insert_like_to_db, delete_like_from_db, user_has_liked_reply,
-                search_from_db, get_forum_category_dict)
+
+from src.db import (db, create_tables, mock_db_content,
+                    insert_admin_account_into_db, insert_new_user_into_db,
+                    get_user_id_for_session, get_username_by_reply_id, get_username_by_thread_id,
+                    insert_category_to_db, delete_category_from_db, category_exists_in_db, get_list_of_category_ids_and_names,
+                    insert_thread_into_db, update_thread_in_db, delete_thread_from_db, get_thread_by_thread_id,
+                    insert_reply_into_db, update_reply_in_db, delete_reply_from_db, get_reply_by_id,
+                    insert_like_to_db, delete_like_from_db, user_has_liked_reply,
+                    search_from_db, get_forum_category_dict)
 
 
 ###############################################################################
