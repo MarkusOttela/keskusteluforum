@@ -319,6 +319,7 @@ def user_has_permission_to_category(category_id: int, user_id: int) -> bool:
     """Return True if user has permission to access the category."""
     sql = text("SELECT user_id FROM permissions WHERE category_id = :category_id ")
     permission_ids = [t[0] for t in db.session.execute(sql, {"category_id": category_id}).fetchall()]
+    print(permission_ids)
     return user_id in permission_ids
 
 

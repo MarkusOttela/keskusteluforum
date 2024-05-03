@@ -65,6 +65,19 @@ def index() -> str:
                            user_id=get_user_id_for_session(),
                            forum_categories=get_forum_category_dict())
 
+def permissions_ok(message:str, category_id: int = None, thread_id: int = None) -> bool:
+    """Check if user has permission to do action."""
+    
+    if thread_id is not None and category_id is None:
+        category_id = get_thread_by_thread_id(thread_id).category_id
+    
+    user_is_admin = (session[USERNAME] == ADMIN)
+    restricted_category = get_forum_category_dict()[category_id].is_restricted
+    user_has_permission = user_has_permission_to_category(category_id, get_user_id_for_session())
+    if restricted_category and (not user_is_admin or user_has_permission):
+        flash(message)
+        return False
+    return True
 
 ###############################################################################
 #                                  CATEGORIES                                 #
@@ -155,10 +168,7 @@ def thread(thread_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
 
-    category_id = get_thread_by_thread_id(thread_id).category_id
-
-    if session[USERNAME] != ADMIN and not user_has_permission_to_category(category_id, get_user_id_for_session()):
-        flash("Sinulla ei ole pääsyä ketjuun.")
+    if not permissions_ok("Sinulla ei ole pääsyä ketjuun.", thread_id=thread_id):
         return render_template('index.html')
 
     return render_template('thread.html',
@@ -195,8 +205,7 @@ def submit_thread() -> str:
             return render_template('new_thread.html',
                                    username=session[USERNAME],
                                    ids_and_categories=get_list_of_category_ids_and_names())
-
-
+        category_id = int(category_id)
 
         if not title:
             flash("Virhe: Otsikko ei voi olla tyhjä.")
@@ -210,7 +219,10 @@ def submit_thread() -> str:
                                    username=session[USERNAME],
                                    ids_and_categories=get_list_of_category_ids_and_names())
 
-        thread_id = insert_thread_into_db(int(category_id), get_user_id_for_session(), title, message)
+        if not permissions_ok("Sinulla ei ole oikeutta luoda ketjua.", category_id=category_id):
+            return render_template('index.html')
+
+        thread_id = insert_thread_into_db(category_id, get_user_id_for_session(), title, message)
 
         return render_template('thread.html',
                                user_id=get_user_id_for_session(),
@@ -225,6 +237,9 @@ def submit_thread() -> str:
 def edit_thread(thread_id: int) -> str:
     """Edit thread."""
     if not USERNAME in session.keys():
+        return render_template('index.html')
+
+    if not permissions_ok("Sinulla ei ole oikeutta muokata ketjua.", thread_id=thread_id):
         return render_template('index.html')
 
     return render_template("edit_thread.html",
@@ -262,6 +277,9 @@ def submit_modified_thread(thread_id: int) -> str:
                                    username=session[USERNAME],
                                    ids_and_categories=get_list_of_category_ids_and_names())
 
+        if not permissions_ok("Sinulla ei ole oikeutta muokata ketjua.", thread_id=thread_id):
+            return render_template('index.html')
+
         update_thread_in_db(thread_id, title, message)
         return redirect(f"/thread/{thread_id}")  # type: ignore
 
@@ -270,6 +288,9 @@ def submit_modified_thread(thread_id: int) -> str:
 def delete_thread(thread_id: int) -> str:
     """Delete thread."""
     if not USERNAME in session.keys():
+        return render_template('index.html')
+
+    if not permissions_ok("Sinulla ei ole oikeutta poistaa ketjua.", thread_id=thread_id):
         return render_template('index.html')
 
     if get_username_by_thread_id(thread_id) == session[USERNAME]:
@@ -291,6 +312,9 @@ def reply_form(thread_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
 
+    if not permissions_ok("Sinulla ei ole oikeutta vastata ketjuun.", thread_id=thread_id):
+        return render_template('index.html')
+
     return render_template('new_reply.html',
                            username=session[USERNAME],
                            thread=get_thread_by_thread_id(thread_id))
@@ -300,6 +324,9 @@ def reply_form(thread_id: int) -> str:
 def submit_reply(thread_id: int) -> str:
     """Submit reply from user to the thread."""
     if not USERNAME in session.keys():
+        return render_template('index.html')
+
+    if not permissions_ok("Sinulla ei ole oikeutta vastata ketjuun.", thread_id=thread_id):
         return render_template('index.html')
 
     if request.method == POST:
@@ -324,6 +351,9 @@ def submit_reply(thread_id: int) -> str:
 def edit_reply(thread_id: int, reply_id: int) -> str:
     """Edit Reply."""
     if not USERNAME in session.keys():
+        return render_template('index.html')
+
+    if not permissions_ok("Sinulla ei ole oikeutta muokata vastausta.", thread_id=thread_id):
         return render_template('index.html')
 
     reply = get_reply_by_id(reply_id)
@@ -358,6 +388,9 @@ def submit_modified_reply(thread_id: int, reply_id: int) -> str:
                                    username=session[USERNAME],
                                    thread=get_thread_by_thread_id(thread_id))
 
+        if not permissions_ok("Sinulla ei ole oikeutta muokata vastausta.", thread_id=thread_id):
+            return render_template('index.html')
+
         update_reply_in_db(reply_id, message)
 
         return redirect(f"/thread/{thread_id}")  # type: ignore
@@ -367,6 +400,9 @@ def submit_modified_reply(thread_id: int, reply_id: int) -> str:
 def delete_reply(thread_id: int, reply_id: int) -> str:
     """Delete reply from user to the thread."""
     if not USERNAME in session.keys():
+        return render_template('index.html')
+
+    if not permissions_ok("Sinulla ei ole oikeutta poistaa ketjua.", thread_id=thread_id):
         return render_template('index.html')
 
     if get_username_by_reply_id(reply_id) == session[USERNAME]:
@@ -388,6 +424,9 @@ def like_reply(thread_id: int, reply_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
 
+    if not permissions_ok("Sinulla ei ole oikeutta tykätä vastauksesta.", thread_id=thread_id):
+        return render_template('index.html')
+
     if get_username_by_reply_id(reply_id) == session[USERNAME]:
         flash("Et voi tykätä omasta vastauksestasi.")
     elif user_has_liked_reply(get_user_id_for_session(), reply_id):
@@ -402,6 +441,9 @@ def like_reply(thread_id: int, reply_id: int) -> str:
 def unlike_reply(thread_id: int, reply_id: int) -> str:
     """Remove user's like to a reply."""
     if not USERNAME in session.keys():
+        return render_template('index.html')
+
+    if not permissions_ok("Sinulla ei ole oikeutta poistaa tykkäystä vastauksesta.", thread_id=thread_id):
         return render_template('index.html')
 
     if get_username_by_reply_id(reply_id) == session[USERNAME]:
@@ -425,6 +467,8 @@ def search_posts() -> str:
         return render_template('index.html')
 
     query = request.args["query"]
+
+    # TODO: Permission check
 
     if not query:
         flash(f"Et voi hakea tyhjällä syötteellä.")
