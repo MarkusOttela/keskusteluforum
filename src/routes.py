@@ -192,9 +192,12 @@ def new_thread() -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
 
+    ids_and_cat_names = [(id_, name) for id_, name in get_list_of_category_ids_and_names()
+                         if user_has_permission_to_category(id_, get_user_id_for_session())]
+
     return render_template('new_thread.html',
                            username=session[USERNAME],
-                           ids_and_categories=get_list_of_category_ids_and_names())
+                           ids_and_categories=ids_and_cat_names)
 
 
 @app.route("/submit_thread/", methods=[GET, POST])
