@@ -100,14 +100,14 @@ def new_category() -> str:
         flash("Vain adminit voivat luoda kategorioita!")
         return render_template('index.html')
 
-    user_ids_and_names = get_user_ids_and_names()
-
-    return render_template('new_category.html', user_ids_and_names=user_ids_and_names)
+    return render_template('new_category.html',
+                           user_ids_and_names=get_user_ids_and_names(),
+                           category_name='')
 
 
 @app.route("/create_category", methods=["GET", "POST"])
 def create_category() -> str:
-    """Createa new category."""
+    """Create a new category."""
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
@@ -115,21 +115,20 @@ def create_category() -> str:
         return render_template('index.html')
 
     category_name = request.form.get("category_name")
-
-    if not category_name:
-        flash("Anna kategorialle nimi.")
-        return redirect(url_for('new_category'))  # type: ignore
-
-    if category_exists_in_db(category_name):
-        flash("Kategoria on jo olemassa.")
-        return redirect(url_for('new_category'))  # type: ignore
-
     all_users = request.form.get('all')
     sel_users = request.form.getlist('sel_users')
 
+    if not category_name:
+        flash("Anna kategorialle nimi.")
+    if category_exists_in_db(category_name):
+        flash("Kategoria on jo olemassa.")
     if all_users is None and not sel_users:
         flash("Valitse kategorian näkyvyys.")
-        return redirect(url_for('new_category'))  # type: ignore
+
+    if '_flashes' in session:
+        return render_template('new_category.html',
+                               user_ids_and_names=get_user_ids_and_names(),
+                               category_name=category_name)
 
     category_id = insert_category_to_db(category_name, restricted=all_users is None)
 
