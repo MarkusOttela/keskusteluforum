@@ -324,6 +324,11 @@ def delete_permissions_for_category_from_db(category_id: int) -> None:
 
 def user_has_permission_to_category(category_id: int, user_id: int) -> bool:
     """Return True if user has permission to access the category."""
+    sql = text("SELECT username FROM users WHERE user_id = :user_id ")
+    user = db.session.execute(sql, {"user_id": user_id}).fetchone()[0]
+    if user == ADMIN:
+        return True
+
     sql = text("SELECT restricted FROM categories WHERE category_id = :category_id ")
     is_restricted = db.session.execute(sql, {"category_id": category_id}).fetchone()[0]
 
