@@ -2,31 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Uusi kategoria</title>
+    <title>Luo uusi kategoria</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
 <h1>Keskusteluforum</h1>
 
-<h2>Luo uusi kategoria</h2>
-
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="color: {{ 'green' if category == 'success' else 'red' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    <br>
+    {% endif %}
 {% endwith %}
 
+<h3>Luo uusi kategoria</h3>
 
 <form action="/create_category" method="POST">
     Kategorian nimi:<br>
-    <input type="text" name="category_name" value="{{category_name}}">
-    <p>Kategorian käyttäjät:<br>
-    <br><input type="checkbox" name="all" value="all"> kaikki
+    <input type="text" name="category_name" value="{{category_name}}"><br><br>
+    Kategorian käyttäjät:<br><br>
+    <input type="checkbox" name="all" value="all"> kaikki
 
     <p>
     Tai mukauta:

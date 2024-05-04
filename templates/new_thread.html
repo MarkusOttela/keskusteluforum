@@ -2,16 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Luo uusi ketju</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
+<h1>Keskusteluforum</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="color: {{ 'green' if category == 'success' else 'red' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    <br>
+    {% endif %}
+{% endwith %}
+
 {% if ids_and_categories %}
 
-    <h1>Uusi ketju</h1>
+    <h3>Luo uusi ketju</h3>
 
     <form action="/submit_thread/" method="post">
-
         <label for="categories">Valitse kategoria ketjulle:</label>
         <select id="categories" name="category_id">
             {% for cat_id, category_name in ids_and_categories %}
@@ -19,26 +32,14 @@
             {% endfor %}
         </select>
 
-    <p>
-    <label for="title">Otsikko:</label><br>
-    <textarea id="title" name="title" rows="1" cols="50">{{request.form.title}}</textarea>
-    <br><label for="content">Viesti:</label><br>
-    <textarea id="content" name="content" rows="10" cols="50">{{request.form.content}}</textarea>
-    <br><input type="submit" value="Lähetä">
-    {% endif %}
-
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
-{% endwith %}
-
-
-</form>
+        <p>
+        <label for="title">Otsikko:</label><br>
+        <textarea id="title" name="title" rows="1" cols="50">{{request.form.title}}</textarea>
+        <br><label for="content">Viesti:</label><br>
+        <textarea id="content" name="content" rows="10" cols="50">{{request.form.content}}</textarea>
+        <br><input type="submit" value="Lähetä">
+        {% endif %}
+    </form>
 
 </body>
 </html>

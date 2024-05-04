@@ -9,7 +9,18 @@
 
 <h1>Keskusteluforum</h1>
 
-<h2>Ketjut joissa esiintyy sana '{{query}}'</h2>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="color: {{ 'green' if category == 'success' else 'red' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    <br>
+    {% endif %}
+{% endwith %}
+
+<h3>Ketjut joissa esiintyy sana '{{query}}'</h3>
 
 
 {% for thread_id in thread_ids %}

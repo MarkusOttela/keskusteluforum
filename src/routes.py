@@ -82,7 +82,7 @@ def permissions_ok(message: str, category_id: int = None, thread_id: int = None)
     user_has_permission = user_has_permission_to_category(category_id, get_user_id_for_session())
 
     if not user_is_admin and restricted_category and not user_has_permission:
-        flash(message)
+        flash(message, category='error')
         return False
     return True
 
@@ -97,7 +97,7 @@ def new_category() -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
-        flash("Vain adminit voivat luoda kategorioita!")
+        flash("Vain adminit voivat luoda kategorioita!", category='error')
         return render_template('index.html')
 
     return render_template('new_category.html',
@@ -111,7 +111,7 @@ def create_category() -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
-        flash("Vain adminit voivat luoda kategorioita!")
+        flash("Vain adminit voivat luoda kategorioita!", category='error')
         return render_template('index.html')
 
     category_name = request.form.get("category_name")
@@ -119,11 +119,11 @@ def create_category() -> str:
     sel_users = request.form.getlist('sel_users')
 
     if not category_name:
-        flash("Anna kategorialle nimi.")
+        flash("Anna kategorialle nimi.", category='error')
     if category_exists_in_db(category_name):
-        flash("Kategoria on jo olemassa.")
+        flash("Kategoria on jo olemassa.", category='error')
     if all_users is None and not sel_users:
-        flash("Valitse kategorian näkyvyys.")
+        flash("Valitse kategorian näkyvyys.", category='error')
 
     if '_flashes' in session:
         return render_template('new_category.html',
@@ -136,7 +136,7 @@ def create_category() -> str:
         for user_id in sel_users:
             insert_permission_into_db(category_id, int(user_id))
 
-    flash(f"Uusi kategoria '{category_name}' luotu")
+    flash(f"Uusi kategoria '{category_name}' luotu", category='success')
     return redirect(url_for('index'))  # type: ignore
 
 
@@ -146,7 +146,7 @@ def delete_category(category_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
-        flash("Vain adminit voivat poistaa kategorioita!")
+        flash("Vain adminit voivat poistaa kategorioita!", category='error')
         return render_template('index.html')
 
     categories = get_forum_category_dict()
@@ -163,7 +163,7 @@ def delete_category(category_id: int) -> str:
     delete_permissions_for_category_from_db(category_id)
     delete_category_from_db(category_id)
 
-    flash(f"Kategoria '{categories[category_id].name}' poistettu.")
+    flash(f"Kategoria '{categories[category_id].name}' poistettu.", category='success')
     return redirect(url_for('index'))  # type: ignore
 
 
@@ -213,11 +213,11 @@ def submit_thread() -> str:
 
         # Validate input
         if not category_id.isnumeric():
-            flash("Virhe: Kategoriatunnus ei ollut numero.")
+            flash("Virhe: Kategoriatunnus ei ollut numero.", category='error')
         if not title:
-            flash("Virhe: Otsikko ei voi olla tyhjä.")
+            flash("Virhe: Otsikko ei voi olla tyhjä.", category='error')
         if not content:
-            flash("Virhe: Viesti ei voi olla tyhjä.")
+            flash("Virhe: Viesti ei voi olla tyhjä.", category='error')
 
         if '_flashes' in session:
             return render_template('new_thread.html',
@@ -231,6 +231,7 @@ def submit_thread() -> str:
 
         thread_id = insert_thread_into_db(category_id, get_user_id_for_session(), title, content)
 
+        flash(f"Uusi ketju '{title}' luotiin onnistuneesti.", category='success')
         return render_template('thread.html',
                                user_id=get_user_id_for_session(),
                                username=session[USERNAME],
@@ -264,30 +265,25 @@ def submit_modified_thread(thread_id: int) -> str:
     if request.method == POST:
 
         title = request.form.get('title')
-        message = request.form.get('message')
+        content = request.form.get('content')
 
         if not title:
-            flash("Virhe: Otsikko ei voi olla tyhjä.")
-            return render_template('new_thread.html',
-                                   username=session[USERNAME],
-                                   ids_and_categories=get_list_of_category_ids_and_names())
-
-        if not message:
-            flash("Virhe: Viesti ei voi olla tyhjä.")
-            return render_template('new_thread.html',
-                                   username=session[USERNAME],
-                                   ids_and_categories=get_list_of_category_ids_and_names())
-
+            flash("Virhe: Otsikko ei voi olla tyhjä.", category='error')
+        if not content:
+            flash("Virhe: Viesti ei voi olla tyhjä.", category='error')
         if get_username_by_thread_id(thread_id) != session[USERNAME]:
-            flash("Virhe: Väärä käyttäjä.")
+            flash("Virhe: Väärä käyttäjä.", category='error')
+
+        if '_flashes' in session:
             return render_template('new_thread.html',
                                    username=session[USERNAME],
-                                   ids_and_categories=get_list_of_category_ids_and_names())
+                                   ids_and_categories=get_list_of_category_ids_and_names(),
+                                   title=title, content=content)
 
         if not permissions_ok("Sinulla ei ole oikeutta muokata ketjua.", thread_id=thread_id):
             return render_template('index.html')
 
-        update_thread_in_db(thread_id, title, message)
+        update_thread_in_db(thread_id, title, content)
         return redirect(f"/thread/{thread_id}")  # type: ignore
 
 
@@ -308,9 +304,9 @@ def delete_thread(thread_id: int) -> str:
                 delete_like_from_db(like.user_id, like.reply_id)
             delete_reply_from_db(reply.reply_id)
         delete_thread_from_db(thread_.thread_id)
-        flash("Ketju poistettu.")
+        flash("Ketju poistettu.", category='success')
     else:
-        flash("Et voi poistaa muiden käyttäjien ketjuja.")
+        flash("Et voi poistaa muiden käyttäjien ketjuja.", category='error')
 
     return redirect(url_for('index'))  # type: ignore
 
@@ -347,7 +343,7 @@ def submit_reply(thread_id: int) -> str:
 
         # Validate input
         if not message:
-            flash("Virhe: Viesti ei voi olla tyhjä.")
+            flash("Viesti ei voi olla tyhjä.", category='error')
             return render_template('new_reply.html',
                                    username=session[USERNAME],
                                    thread=get_thread_by_thread_id(thread_id))
@@ -389,13 +385,13 @@ def submit_modified_reply(thread_id: int, reply_id: int) -> str:
 
         # Validate input
         if not message:
-            flash("Virhe: Viesti ei voi olla tyhjä.")
+            flash("Viesti ei voi olla tyhjä.", category='error')
             return render_template('edit_reply.html',
                                    username=session[USERNAME],
                                    thread=get_thread_by_thread_id(thread_id))
 
         if get_username_by_reply_id(reply_id) != session[USERNAME]:
-            flash("Virhe: Väärä käyttäjä.")
+            flash("Väärä käyttäjä.", category='error')
             return render_template('thread.html',
                                    user_id=get_user_id_for_session(),
                                    username=session[USERNAME],
@@ -420,9 +416,9 @@ def delete_reply(thread_id: int, reply_id: int) -> str:
 
     if get_username_by_reply_id(reply_id) == session[USERNAME]:
         delete_reply_from_db(reply_id)
-        flash("Viesti poistettu.")
+        flash("Viesti poistettu.", category='success')
     else:
-        flash("Virhe: Väärä käyttäjä.")
+        flash("Virhe: Väärä käyttäjä.", category='error')
 
     return redirect(f"/thread/{thread_id}")  # type: ignore
 
@@ -441,9 +437,9 @@ def like_reply(thread_id: int, reply_id: int) -> str:
         return render_template('index.html')
 
     if get_username_by_reply_id(reply_id) == session[USERNAME]:
-        flash("Et voi tykätä omasta vastauksestasi.")
+        flash("Et voi tykätä omasta vastauksestasi.", category='error')
     elif user_has_liked_reply(get_user_id_for_session(), reply_id):
-        flash("Et voi tykätä vastauksesta uudestaan.")
+        flash("Et voi tykätä vastauksesta uudestaan.", category='error')
     else:
         insert_like_to_db(get_user_id_for_session(), reply_id)
 
@@ -460,9 +456,9 @@ def unlike_reply(thread_id: int, reply_id: int) -> str:
         return render_template('index.html')
 
     if get_username_by_reply_id(reply_id) == session[USERNAME]:
-        flash("Et voi tykätä omista vastauksistasi ja siksi poistaa niistä tykkäyksiä.")
+        flash("Et voi tykätä omista vastauksistasi ja siksi poistaa niistä tykkäyksiä.", category='error')
     elif not user_has_liked_reply(get_user_id_for_session(), reply_id):
-        flash("Et voi poistaa tykkäystä vastauksesta uudestaan.")
+        flash("Et voi poistaa tykkäystä vastauksesta uudestaan.", category='error')
     else:
         delete_like_from_db(get_user_id_for_session(), reply_id)
 
@@ -484,13 +480,13 @@ def search_posts() -> str:
     # TODO: Permission check
 
     if not query:
-        flash(f"Et voi hakea tyhjällä syötteellä.")
+        flash(f"Et voi hakea tyhjällä syötteellä.", category='error')
         return redirect(url_for('index'))  # type: ignore
 
     thread_ids = search_from_db(query)
 
     if not thread_ids:
-        flash(f"Ei tuloksia haulle '{query}'.")
+        flash(f"Ei tuloksia haulle '{query}'.", category='success')
         return redirect(url_for('index'))  # type: ignore
 
     else:
@@ -526,22 +522,22 @@ def register() -> str:
     result = db.session.execute(sql, {USERNAME: username})
 
     if username == ADMIN:
-        flash('Käyttäjänimi on varattu admineille.')
+        flash('Käyttäjänimi on varattu admineille.', category='error')
         return render_template('new_user.html')
 
     if result.first()[0]:
-        flash('Käyttäjänimi on jo käytössä.')
+        flash('Käyttäjänimi on jo käytössä.', category='error')
         return render_template('new_user.html')
 
     # Password validation
     if password1 != password2:
-        flash("Salasanat eivät täsmänneet.")
+        flash("Salasanat eivät täsmänneet.", category='error')
         return render_template('new_user.html')
 
     # Store hash
     insert_new_user_into_db(username, password1)
 
-    flash('Olet nyt rekisteröitynyt.')
+    flash('Olet nyt rekisteröitynyt.', category='success')
     return render_template('index.html')
 
 
@@ -556,7 +552,7 @@ def login() -> str | Response:
 
     if result is None:
         # Username does not exist
-        flash(login_error)
+        flash(login_error, category='error')
         return render_template('index.html')
 
     # Authenticate user with password
@@ -564,7 +560,7 @@ def login() -> str | Response:
         argon2.PasswordHasher().verify(result[0], request.form["password"])
         session[USERNAME] = username
     except argon2.exceptions.VerifyMismatchError:
-        flash(login_error)
+        flash(login_error, category='error')
 
     return redirect(url_for('index'))
 
@@ -573,4 +569,5 @@ def login() -> str | Response:
 def logout():
     """Log out the user."""
     del session[USERNAME]
-    return redirect("/")
+    flash('Sinut on nyt kirjattu ulos', category='success')
+    return redirect(url_for('index'))

@@ -2,31 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Vastaa</title>
+    <title>Vastaa ketjuun {{thread.title}}</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-<h1>Vastaa</h1>
+<h1>Keskusteluforum</h1>
 
-Vastaa käyttäjän {{thread.username}} threadiin:
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="color: {{ 'green' if category == 'success' else 'red' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    <br>
+    {% endif %}
+{% endwith %}
 
+<h3>Vastaa käyttäjän {{thread.username}} ketjuun:</h3>
 
 <form action="/submit_reply/{{thread.thread_id}}" method="post">
     <textarea name="message" rows="10" cols="50"></textarea>
     <br><input type="submit" value="Lähetä">
-
-{% with messages = get_flashed_messages() %}
-{% if messages %}
-    <ul style="color: orangered;">
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
-{% endwith %}
-
-
 </form>
 
 </body>

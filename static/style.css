@@ -1,11 +1,16 @@
-    .no-bullet {
-      list-style-type: none;
-    }
+.no-bullet {
+  list-style-type: none;
+}
 
-    .indented {
-        text-indent: 10px;
-    }
+.indented {
+    text-indent: 10px;
+}
 
-    .large-font {
-        font-size: 120%;
-    }
+.large-font {
+    font-size: 120%;
+}
+
+h3 {
+    margin-top: 0;
+    margin-bottom: 0;
+}

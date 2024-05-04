@@ -2,34 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Muokkaa aihetta {{thread.title}}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-{% if ids_and_categories %}
-    <form action="/submit_modified_thread/{{thread.thread_id}}" method="post">
+<h1>Keskusteluforum</h1>
 
-    Muokkaa aihetta
-    <p>
-    <label for="title">Otsikko:</label><br>
-    <textarea id="title" name="title" rows="1" cols="50">{{thread.title}}</textarea><br>
-    <label for="message">Viesti:</label><br>
-    <textarea id="message" name="message" rows="10" cols="50" value="{{thread.title}}">{{thread.content}}</textarea>
-    <br><input type="submit" value="Lähetä">
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="color: {{ 'green' if category == 'success' else 'red' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    <br>
     {% endif %}
-
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
 {% endwith %}
 
+{% if ids_and_categories %}
 
-</form>
+    <h3>Ketju: {{thread.title}}</h3>
+
+    Muokkaa aihetta<br><br>
+
+    <form action="/submit_modified_thread/{{thread.thread_id}}" method="post">
+        <label for="title">Otsikko:</label><br>
+        <textarea id="title" name="title" rows="1" cols="50">{{thread.title}}</textarea><br>
+        <label for="content">Viesti:</label><br>
+        <textarea id="content" name="content" rows="10" cols="50" value="{{thread.title}}">{{thread.content}}</textarea>
+        <br><input type="submit" value="Lähetä">
+    </form>
+{% endif %}
 
 </body>
 </html>

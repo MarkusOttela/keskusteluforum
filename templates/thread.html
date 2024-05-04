@@ -8,35 +8,34 @@
 <body>
 
 <h1>Keskusteluforum</h1>
-<h2>{{thread.title}}</h2>
 
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="color: {{ 'green' if category == 'success' else 'red' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    <br>
+    {% endif %}
 {% endwith %}
 
 {% if session.username %}
     <a href="{{url_for('index')}}" class="btn btn-primary">Etusivulle</a>
     <a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
 
-    <p style="font-size: small;">
-        <b>{{thread.username}}</b> ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}}):
-    <p>
+    <p style="font-size: small; margin-bottom: 0">
+    <b>{{thread.username}}</b> ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}}):
+    <h3>{{thread.title}}</h3>
     {{thread.content}}<br>
     {% if thread.username == session.username %}
     <a href="/edit_thread/{{ thread.thread_id }}" class="btn btn-primary">Muokkaa</a>
     <a href="/delete_thread/{{ thread.thread_id }}" class="btn btn-primary">Poista</a><br>
-    {% endif %}
-
+{% endif %}
 
     <ul>
     {% for reply in thread.replies.values() %}
-    <li>
+        <li>
         <span style="font-size: small;">
             <b>{{reply.likes|length}} 👍 {{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
         </span>

@@ -7,17 +7,21 @@
 </head>
 <body>
 
-<h1>Rekisteröidy</h1>
+<h1>Keskusteluforum</h1>
 
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div style="color: {{ 'green' if category == 'success' else 'red' }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    <br>
+    {% endif %}
 {% endwith %}
+
+<h3>Rekisteröidy</h3>
+
 
 <form action="/register" method="POST">
     Käyttäjätunnus<br>
@@ -26,7 +30,6 @@
     <input type="password" name="password2"><br>
     Salasana uudelleen<br>
     <input type="password" name="password1"><br>
-
     <input type="submit" value="Luo tunnus">
 </form>
 
