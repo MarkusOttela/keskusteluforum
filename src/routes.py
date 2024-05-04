@@ -213,11 +213,11 @@ def submit_thread() -> str:
 
         # Validate input
         if not category_id.isnumeric():
-            flash("Virhe: Kategoriatunnus ei ollut numero.", category='error')
+            flash("Virhe! Kategoriatunnus ei ollut numero.", category='error')
         if not title:
-            flash("Virhe: Otsikko ei voi olla tyhjä.", category='error')
+            flash("Otsikko ei voi olla tyhjä.", category='error')
         if not content:
-            flash("Virhe: Viesti ei voi olla tyhjä.", category='error')
+            flash("Viesti ei voi olla tyhjä.", category='error')
 
         if '_flashes' in session:
             return render_template('new_thread.html',
@@ -268,9 +268,9 @@ def submit_modified_thread(thread_id: int) -> str:
         content = request.form.get('content')
 
         if not title:
-            flash("Virhe: Otsikko ei voi olla tyhjä.", category='error')
+            flash("Otsikko ei voi olla tyhjä.", category='error')
         if not content:
-            flash("Virhe: Viesti ei voi olla tyhjä.", category='error')
+            flash("Viesti ei voi olla tyhjä.", category='error')
         if get_username_by_thread_id(thread_id) != session[USERNAME]:
             flash("Virhe: Väärä käyttäjä.", category='error')
 
