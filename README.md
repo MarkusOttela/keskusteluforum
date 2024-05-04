@@ -21,4 +21,4 @@
 
 **Ylläpitäjä** 
   * [x] Voi lisätä ja poistaa keskustelualueita
-  * [ ] Voi luoda yksityisen alueen valituille jäsenille
+  * [x] Voi luoda yksityisen alueen valituille jäsenille
