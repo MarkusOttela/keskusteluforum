@@ -315,11 +315,17 @@ def insert_permission_into_db(category_id: int, user_id: int) -> int:
     return permission_id
 
 
+def delete_permissions_for_category_from_db(category_id: int) -> None:
+    """Delete permissions for category from database."""
+    sql = text("DELETE FROM permissions WHERE category_id = :category_id")
+    db.session.execute(sql, {"category_id": category_id})
+    db.session.commit()
+
+
 def user_has_permission_to_category(category_id: int, user_id: int) -> bool:
     """Return True if user has permission to access the category."""
     sql = text("SELECT user_id FROM permissions WHERE category_id = :category_id ")
     permission_ids = [t[0] for t in db.session.execute(sql, {"category_id": category_id}).fetchall()]
-    print(permission_ids)
     return user_id in permission_ids
 
 

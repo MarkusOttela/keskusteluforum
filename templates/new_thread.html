@@ -21,9 +21,9 @@
 
     <p>
     <label for="title">Otsikko:</label><br>
-    <textarea id="title" name="title" rows="1" cols="50"></textarea>
-    <br><label for="message">Viesti:</label><br>
-    <textarea id="message" name="message" rows="10" cols="50"></textarea>
+    <textarea id="title" name="title" rows="1" cols="50">{{request.form.title}}</textarea>
+    <br><label for="content">Viesti:</label><br>
+    <textarea id="content" name="content" rows="10" cols="50">{{request.form.content}}</textarea>
     <br><input type="submit" value="Lähetä">
     {% endif %}
 

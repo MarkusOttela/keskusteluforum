@@ -38,7 +38,8 @@ from src.db import (db, create_tables, mock_db_content,
                     insert_thread_into_db, update_thread_in_db, delete_thread_from_db, get_thread_by_thread_id,
                     insert_reply_into_db, update_reply_in_db, delete_reply_from_db, get_reply_by_id,
                     insert_like_to_db, delete_like_from_db, user_has_liked_reply,
-                    search_from_db, get_forum_category_dict, insert_permission_into_db, user_has_permission_to_category)
+                    search_from_db, get_forum_category_dict, insert_permission_into_db, user_has_permission_to_category,
+                    delete_permissions_for_category_from_db)
 
 
 ###############################################################################
@@ -65,19 +66,26 @@ def index() -> str:
                            user_id=get_user_id_for_session(),
                            forum_categories=get_forum_category_dict())
 
-def permissions_ok(message:str, category_id: int = None, thread_id: int = None) -> bool:
+
+###############################################################################
+#                                  PERMISSIONS                                #
+###############################################################################
+
+def permissions_ok(message: str, category_id: int = None, thread_id: int = None) -> bool:
     """Check if user has permission to do action."""
-    
+
     if thread_id is not None and category_id is None:
         category_id = get_thread_by_thread_id(thread_id).category_id
-    
+
     user_is_admin = (session[USERNAME] == ADMIN)
     restricted_category = get_forum_category_dict()[category_id].is_restricted
     user_has_permission = user_has_permission_to_category(category_id, get_user_id_for_session())
-    if restricted_category and (not user_is_admin or user_has_permission):
+
+    if not user_is_admin and restricted_category and not user_has_permission:
         flash(message)
         return False
     return True
+
 
 ###############################################################################
 #                                  CATEGORIES                                 #
@@ -139,7 +147,7 @@ def delete_category(category_id: int) -> str:
     if not USERNAME in session.keys():
         return render_template('index.html')
     if session[USERNAME] != ADMIN:
-        flash("Vain adminit voivat luoda kategorioita!")
+        flash("Vain adminit voivat poistaa kategorioita!")
         return render_template('index.html')
 
     categories = get_forum_category_dict()
@@ -152,6 +160,8 @@ def delete_category(category_id: int) -> str:
                 delete_like_from_db(like.user_id, like.reply_id)
             delete_reply_from_db(reply.reply_id)
         delete_thread_from_db(thread_.thread_id)
+
+    delete_permissions_for_category_from_db(category_id)
     delete_category_from_db(category_id)
 
     flash(f"Kategoria '{categories[category_id].name}' poistettu.")
@@ -197,7 +207,7 @@ def submit_thread() -> str:
     if request.method == POST:
         category_id = request.form.get('category_id')
         title       = request.form.get('title')
-        message     = request.form.get('message')
+        content     = request.form.get('content')
 
         # Validate input
         if not category_id.isnumeric():
@@ -213,7 +223,7 @@ def submit_thread() -> str:
                                    username=session[USERNAME],
                                    ids_and_categories=get_list_of_category_ids_and_names())
 
-        if not message:
+        if not content:
             flash("Virhe: Viesti ei voi olla tyhjä.")
             return render_template('new_thread.html',
                                    username=session[USERNAME],
@@ -222,7 +232,7 @@ def submit_thread() -> str:
         if not permissions_ok("Sinulla ei ole oikeutta luoda ketjua.", category_id=category_id):
             return render_template('index.html')
 
-        thread_id = insert_thread_into_db(category_id, get_user_id_for_session(), title, message)
+        thread_id = insert_thread_into_db(category_id, get_user_id_for_session(), title, content)
 
         return render_template('thread.html',
                                user_id=get_user_id_for_session(),
@@ -294,10 +304,16 @@ def delete_thread(thread_id: int) -> str:
         return render_template('index.html')
 
     if get_username_by_thread_id(thread_id) == session[USERNAME]:
-        delete_thread_from_db(thread_id)
+
+        thread_ = get_thread_by_thread_id(thread_id)
+        for reply in thread_.replies.values():
+            for like in reply.likes.values():
+                delete_like_from_db(like.user_id, like.reply_id)
+            delete_reply_from_db(reply.reply_id)
+        delete_thread_from_db(thread_.thread_id)
         flash("Ketju poistettu.")
     else:
-        flash("Virhe: Väärä käyttäjä.")
+        flash("Et voi poistaa muiden käyttäjien ketjuja.")
 
     return redirect(url_for('index'))  # type: ignore
 
