@@ -22,17 +22,26 @@
 {% if session.username %}
     Tervetuloa {{ session.username }}!
 
+    {% if not forum_categories.items() %}
+        <h3>Forumilla ei ole keskustelualueita tällä hetkellä.</h3>
+    {%endif%}
+
     <p>
     {% if session.username == "admin" %}
         <a href="{{url_for('new_category')}}" class="btn btn-primary">Uusi kategoria</a>
     {% endif %}
-    <a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
+
+    {% if forum_categories.items() %}
+        <a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
+    {%endif%}
     <a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
 
-    <form action="/search_posts" method="GET">
-        Hakusana: <input type="text" name="query">
-        <input type="submit" value="Hae">
-    </form>
+    {% if forum_categories.items() %}
+        <form action="/search_posts" method="GET">
+            Hakusana: <input type="text" name="query">
+            <input type="submit" value="Hae">
+        </form>
+    {% endif %}
 
     {% if forum_categories  %}
         {% for category_id, category in forum_categories.items() %}

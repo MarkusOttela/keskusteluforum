@@ -211,25 +211,20 @@ def submit_thread() -> str:
         # Validate input
         if not category_id.isnumeric():
             flash("Virhe: Kategoriatunnus ei ollut numero.")
-            return render_template('new_thread.html',
-                                   username=session[USERNAME],
-                                   ids_and_categories=get_list_of_category_ids_and_names())
-        category_id = int(category_id)
-
         if not title:
             flash("Virhe: Otsikko ei voi olla tyhjä.")
-            return render_template('new_thread.html',
-                                   username=session[USERNAME],
-                                   ids_and_categories=get_list_of_category_ids_and_names())
-
         if not content:
             flash("Virhe: Viesti ei voi olla tyhjä.")
+
+        if '_flashes' in session:
             return render_template('new_thread.html',
                                    username=session[USERNAME],
                                    ids_and_categories=get_list_of_category_ids_and_names())
 
+        category_id = int(category_id)
+
         if not permissions_ok("Sinulla ei ole oikeutta luoda ketjua.", category_id=category_id):
-            return render_template('index.html')
+            return redirect(url_for('index'))  # type: ignore
 
         thread_id = insert_thread_into_db(category_id, get_user_id_for_session(), title, content)
 
