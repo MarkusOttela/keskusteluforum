@@ -215,8 +215,12 @@ def submit_thread() -> str:
             flash("Virhe! Kategoriatunnus ei ollut numero.", category='error')
         if not title:
             flash("Otsikko ei voi olla tyhjä.", category='error')
+        if len(title) > 130:
+            flash("Otsikko voi olla enintään 130 merkkiä.", category='error')
         if not content:
             flash("Viesti ei voi olla tyhjä.", category='error')
+        if len(content) > 3000:
+            flash("Viesti voi olla enintään 3000 merkkiä.", category='error')
 
         if '_flashes' in session:
             return render_template('new_thread.html',
@@ -268,8 +272,12 @@ def submit_modified_thread(thread_id: int) -> str:
 
         if not title:
             flash("Otsikko ei voi olla tyhjä.", category='error')
+        if len(title) > 130:
+            flash("Otsikko voi olla enintään 130 merkkiä.", category='error')
         if not content:
             flash("Viesti ei voi olla tyhjä.", category='error')
+        if len(content) > 3000:
+            flash("Viesti voi olla enintään 3000 merkkiä.", category='error')
         if get_username_by_thread_id(thread_id) != session[USERNAME]:
             flash("Virhe: Väärä käyttäjä.", category='error')
 
@@ -337,16 +345,20 @@ def submit_reply(thread_id: int) -> str:
         return redirect(url_for('index'))  # type: ignore
 
     if request.method == POST:
-        message = request.form.get('message')
-
         # Validate input
-        if not message:
+        content = request.form.get('content')
+
+        if len(content) == 0:
             flash("Viesti ei voi olla tyhjä.", category='error')
+        if len(content) > 3000:
+            flash("Viesti voi olla enintään 3000 merkkiä.", category='error')
+
+        if '_flashes' in session:
             return render_template('new_reply.html',
                                    username=session[USERNAME],
                                    thread=get_thread_by_thread_id(thread_id))
 
-        insert_reply_into_db(thread_id, get_user_id_for_session(), message)
+        insert_reply_into_db(thread_id, get_user_id_for_session(), content)
 
     return render_template('thread.html',
                            user_id=get_user_id_for_session(),
@@ -378,27 +390,28 @@ def submit_modified_reply(thread_id: int, reply_id: int) -> str:
     if not USERNAME in session.keys():
         return redirect(url_for('index'))  # type: ignore
 
+    if not permissions_ok("Sinulla ei ole oikeutta muokata vastausta.", thread_id=thread_id):
+        return redirect(url_for('index'))  # type: ignore
+
     if request.method == POST:
-        message = request.form.get('message')
+
+        if get_username_by_reply_id(reply_id) != session[USERNAME]:
+            flash("Väärä käyttäjä.", category='error')
 
         # Validate input
-        if not message:
+        content = request.form.get('content')
+
+        if len(content) == 0:
             flash("Viesti ei voi olla tyhjä.", category='error')
+        if len(content) > 3000:
+            flash("Viesti voi olla enintään 3000 merkkiä.", category='error')
+
+        if '_flashes' in session:
             return render_template('edit_reply.html',
                                    username=session[USERNAME],
                                    thread=get_thread_by_thread_id(thread_id))
 
-        if get_username_by_reply_id(reply_id) != session[USERNAME]:
-            flash("Väärä käyttäjä.", category='error')
-            return render_template('thread.html',
-                                   user_id=get_user_id_for_session(),
-                                   username=session[USERNAME],
-                                   thread=get_thread_by_thread_id(thread_id))
-
-        if not permissions_ok("Sinulla ei ole oikeutta muokata vastausta.", thread_id=thread_id):
-            return redirect(url_for('index'))  # type: ignore
-
-        update_reply_in_db(reply_id, message)
+        update_reply_in_db(reply_id, content)
 
         return redirect(f"/thread/{thread_id}")  # type: ignore
 
@@ -520,21 +533,19 @@ def register() -> str:
     password1 = request.form["password1"]
     password2 = request.form["password2"]
 
-    # Username validation
     sql    = text("SELECT EXISTS(SELECT 1 FROM users WHERE username=(:username))")
     result = db.session.execute(sql, {USERNAME: username})
 
+    # Field validation
+    if len(username) < 3 or len(username) > 20:
+        flash('Käyttäjänimen on oltava vähintään kolme, ja enintään 20 merkkiä.', category='error')
     if username == ADMIN:
         flash('Käyttäjänimi on varattu admineille.', category='error')
-        return render_template('new_user.html')
-
     if result.first()[0]:
         flash('Käyttäjänimi on jo käytössä.', category='error')
-        return render_template('new_user.html')
-
-    # Password validation
     if password1 != password2:
         flash("Salasanat eivät täsmänneet.", category='error')
+    if '_flashes' in session:
         return render_template('new_user.html')
 
     # Store hash
