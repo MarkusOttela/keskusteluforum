@@ -1,7 +1,22 @@
 # Keskusteluforum (TSOHA K2024)
 
+## Web-sovelluksen toiminta
 
-## Toiminnallisuus
+Keskusteluforum on yksinkertainen keskustelukanava. Se vaatii rekisteröitymisen 
+ja tarjoaa forumin palvelut vain sisäänkirjautuneille käyttäjille. Käyttäjä voi
+luoda ketjuja (thread) eri kategorioiden alle, vastata muiden ketjujen luojille,
+sekä peukuttaa muiden vastauksia ylöspäin niin halutessaan. Käyttäjä voi muokata
+ja poistaa sekä vastauksensa luomansa ketjut. Ylläpitäjä taas voi vuorovaikuttaa
+muiden käyttäjien kanssa samaan tapaan, ja tämä voi myös luoda uusia kategorioita.
+Luodessaan uuden kategorion ylläpitäjä voi valita onko kategoria julkinen, tai
+tämä voi white-listata haluamansa käyttäjät kyseiseen kategoriaan. Ylläpitäjä
+voi myös poistaa haluamansa kategoriat, ml. ohjelman automaattisesti luomat 
+esimerkki-kategoriat. Kaikki käyttäjät voivat hakea ketjuja niiden otsikon, 
+sisällön ja vastausten sisällön perusteella. Haku onnistuu vain niiden 
+kategorioiden ketjuihin, joihin käyttäjällä on oikeus.
+
+
+## Toiminnallisuus-TODO-list
 
 **Käyttäjä**
 * [x] Näkee sovelluksen etusivulla 
@@ -55,3 +70,16 @@ Salaisuuden voi luoda esim komennolla
 ### 5. Käynnistä ohjelma
 
     (venv) $ python3 app.py
+
+
+## Testaaminen
+
+Kun palvelin on käynnissä, ohjelma luo tietokantataulut automaattisesti kunhan 
+sillä on yhteys PostgreSQL tietokantaan ympäristömuutujuan `DATABASE_URL` kautta.
+Ohjelman käyttö ei vaadi erityisiä tietoja tai taitoja, se muistuttaa moderneja
+Internet-forumeja.
+
+Istuntojen käyttäminen vaatii `SECRET_KEY` ympäristömuuttujan asettamisen. 
+
+Järjestelmänvalvojan käyttäjätunnus on `admin` ja kirjautumissalasana on ympäristömuuttujan 
+`ADMIN_PASSWORD` arvo.
