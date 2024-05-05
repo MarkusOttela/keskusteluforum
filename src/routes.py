@@ -475,8 +475,6 @@ def search_posts() -> str:
 
     query = request.args["query"]
 
-    # TODO: Permission check
-
     if not query:
         flash(f"Et voi hakea tyhjällä syötteellä.", category='error')
         return redirect(url_for('index'))  # type: ignore
@@ -489,6 +487,13 @@ def search_posts() -> str:
 
     else:
         category_dict = get_forum_category_dict()
+
+        # Filter results by permission
+        restricted_categories = [(id_, name) for id_, name in  get_list_of_category_ids_and_names()
+                                 if not user_has_permission_to_category(id_, get_user_id_for_session())]
+
+        for category_id, _ in restricted_categories:
+            del category_dict[category_id]
 
         return render_template('search_results.html',
                                username=session[USERNAME],
