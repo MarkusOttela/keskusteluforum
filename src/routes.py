@@ -20,6 +20,8 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import os
+
 import argon2
 
 from flask      import render_template, request, flash, session, redirect, url_for, Response
@@ -573,6 +575,7 @@ def login() -> str | Response:
     try:
         argon2.PasswordHasher().verify(result[0], request.form["password"])
         session[USERNAME] = username
+        session["csrf_token"] = os.getrandom(32, flags=0).hex()
     except argon2.exceptions.VerifyMismatchError:
         flash(login_error, category='error')
 

@@ -26,6 +26,7 @@
 <form action="/submit_modified_reply/{{thread.thread_id}}/{{reply.reply_id}}" method="post">
     <textarea name="content" rows="10" cols="50">{{reply.content}}</textarea>
     <br><input type="submit" value="Lähetä">
+    <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
 </form>
 
 </body>

@@ -38,6 +38,7 @@
         <br><label for="content">Viesti:</label><br>
         <textarea id="content" name="content" rows="10" cols="50">{{request.form.content}}</textarea>
         <br><input type="submit" value="Lähetä">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
         {% endif %}
     </form>
 

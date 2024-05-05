@@ -73,6 +73,7 @@
         Salasana<br>
         <input type="password" name="password"><br>
         <input type="submit" value="Kirjaudu">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
     </form>
     <p><a href="{{url_for('new_user')}}" class="btn btn-primary">Rekisteröidy</a>
 {% endif %}
