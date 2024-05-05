@@ -20,7 +20,7 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
-USERNAME = "username"
-ADMIN = "admin"
-POST = "POST"
-GET  = "GET"
+USERNAME = 'username'
+ADMIN = 'admin'
+POST = 'POST'
+GET  = 'GET'

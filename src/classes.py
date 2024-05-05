@@ -25,7 +25,11 @@ import datetime
 
 class Category:
 
-    def __init__(self, category_id: int, is_restricted: bool, name: str) -> None:
+    def __init__(self,
+                 category_id   : int,
+                 is_restricted : bool,
+                 name          : str
+                 ) -> None:
         """Create new category object."""
         self.category_id = category_id
         self.is_restricted = is_restricted
@@ -45,7 +49,7 @@ class Category:
 
     def user_has_permission(self, user_id: int) -> bool:
         """Return True if the user has the permission to view the category."""
-        from src.db import user_has_permission_to_category
+        from src.db import user_has_permission_to_category  # Avoid circular import
         return user_has_permission_to_category(self.category_id, user_id)
 
     def dt_most_recent_post_for_thread(self, thread_id: int) -> datetime:
@@ -56,13 +60,14 @@ class Category:
 class Thread:
 
     def __init__(self,
-                 thread_id:   int,
-                 category_id: int,
-                 user_id:     int,
-                 username:    str,
-                 created:     datetime,
-                 title:       str,
-                 content:     str) -> None:
+                 thread_id   : int,
+                 category_id : int,
+                 user_id     : int,
+                 username    : str,
+                 created     : datetime,
+                 title       : str,
+                 content     : str
+                 ) -> None:
         """Create new Thread object."""
         self.thread_id = thread_id
         self.category_id = category_id
@@ -88,6 +93,7 @@ class Thread:
         if not self.replies:
             return self.created
         return list(self.replies.values())[-1].reply_tstamp
+
 
 class Reply:
 
@@ -120,7 +126,11 @@ class Reply:
 
 class Like:
 
-    def __init__(self, like_id: int, user_id: int, reply_id: int) -> None:
+    def __init__(self,
+                 like_id  : int,
+                 user_id  : int,
+                 reply_id : int
+                 ) -> None:
         """Create new Like object."""
         self.like_id = like_id
         self.user_id = user_id

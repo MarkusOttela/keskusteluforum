@@ -20,11 +20,11 @@ You should have received a copy of the GNU General Public License
 along with Keskusteluforum. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from os import getenv, getrandom
+import os
+import random
 
 import argon2
 import lorem
-import random
 
 from flask            import session
 from flask_sqlalchemy import SQLAlchemy
@@ -32,9 +32,9 @@ from sqlalchemy       import text
 
 from app         import app
 from src.classes import Thread, Reply, Category, Like
-from src.statics import ADMIN
+from src.statics import ADMIN, USERNAME
 
-app.config['SQLALCHEMY_DATABASE_URI'] = getenv('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 db = SQLAlchemy(app)
 
 
@@ -43,7 +43,7 @@ db = SQLAlchemy(app)
 ###############################################################################
 
 def create_tables():
-    """Initialise the database by creating the tables."""
+    """Create databae tables."""
     sql = text("CREATE TABLE IF NOT EXISTS users ("
                "  user_id SERIAL PRIMARY KEY, "
                "  username TEXT, "
@@ -52,7 +52,6 @@ def create_tables():
                "  password_hash TEXT)")
     db.session.execute(sql)
     db.session.commit()
-
 
     sql = text("CREATE TABLE IF NOT EXISTS categories ("
                "  category_id SERIAL PRIMARY KEY, "
@@ -105,20 +104,21 @@ def create_tables():
 
 def mock_db_content():
     """Mock db content for testing."""
-
-    # Sentinel for checking the databases are filled with mock data only once.
-    sql = text("SELECT password_hash FROM users WHERE username=(:username)")
-    result = db.session.execute(sql, {"username": "User1"}).first()
+    # Sentinel that checks the databases are filled with mock data only once.
+    sql = text("SELECT password_hash "
+               "FROM users "
+               "WHERE username=(:username)")
+    result = db.session.execute(sql, {'username': 'User1'}).first()
     if result is not None:
         return
 
-    # Populate with test data:
+    # Populate the db with test data:
 
-    users = ["User1", "User2", "User3", "User4", "User5"]
+    users = [f'User{i}' for i in range(1, 6)]
     for user in users:
         insert_new_user_into_db(user, password=user)
 
-    categories = ["Category 1", "Category 2", "Category 3", "Category 4"]
+    categories = [f'Category {i}' for i in range(1, 5)]
     for category in categories:
         insert_category_to_db(category)
 
@@ -140,7 +140,7 @@ def mock_db_content():
                                                 content=lorem.paragraph())
 
                 for user_id_ in user_ids:
-                    # 50% probability to like the reply of other posters
+                    # 50% probability to like the reply of another user
                     if user_id_ == user_id and random.randint(0, 1):
                         continue
                     insert_like_to_db(user_id, reply_id)
@@ -152,61 +152,77 @@ def mock_db_content():
 
 def insert_admin_account_into_db():
     """Insert the admin account into the database."""
-    # Sentinel that checks if admin account is already set
-    sql = text("SELECT password_hash FROM users WHERE username=(:username)")
-    result = db.session.execute(sql, {"username": "admin"}).first()
+    # Sentinel that checks if the admin account is already set
+    sql = text("SELECT password_hash "
+               "FROM users "
+               "WHERE username=(:username)")
+    result = db.session.execute(sql, {'username': 'admin'}).first()
     if result is not None:
         return
 
-    password_hash = argon2.PasswordHasher().hash(password=getenv('ADMIN_PASSWORD'),
-                                                 salt=getrandom(32, flags=0))
+    password_hash = argon2.PasswordHasher().hash(password=os.getenv('ADMIN_PASSWORD'),
+                                                 salt=os.getrandom(32, flags=0))
 
     sql = text("INSERT INTO users (username, is_admin, password_hash) "
                "VALUES (:username, :is_admin, :password_hash)"
                "ON CONFLICT DO NOTHING")
-    db.session.execute(sql, {"username": 'admin',
-                             "is_admin": True,
-                             "password_hash": password_hash})
+    db.session.execute(sql, {'username'      : 'admin',
+                             'is_admin'      : True,
+                             'password_hash' : password_hash})
     db.session.commit()
 
 
 def insert_new_user_into_db(username: str, password: str) -> int:
-    """Insert a new user into the database.
+    """Insert a new user into the database. Return user_id.
 
     Some repeated code here, but for misuse resistance, we want
     the admin account to be creatable only by a separate function.
     """
     password_hash = argon2.PasswordHasher().hash(password=password,
-                                                 salt=getrandom(32, flags=0))
+                                                 salt=os.getrandom(32, flags=0))
 
     sql = text("INSERT INTO users (username, password_hash) "
                "VALUES (:username, :password_hash)"
                "ON CONFLICT DO NOTHING "
                "RETURNING user_id")
-    user_id = db.session.execute(sql, {"username": username,
-                                       "is_admin": False,
-                                       "password_hash": password_hash})
+    user_id = db.session.execute(sql, {'username'      : username,
+                                       'is_admin'      : False,
+                                       'password_hash' : password_hash})
     db.session.commit()
     return user_id
 
 
 def get_user_id_for_session() -> int:
-    """Get user's user_id by username."""
-    sql = text("SELECT users.user_id FROM users WHERE username=(:username)")
-    user_id = db.session.execute(sql, {"username": session["username"]}).fetchone()[0]
+    """Get user's user_id by session username."""
+    sql = text("SELECT users.user_id "
+               "FROM users "
+               "WHERE username=(:username)")
+    user_id = db.session.execute(sql, {'username': session[USERNAME]}).fetchone()[0]
     return user_id
 
 
 def get_user_id_by_username(username: str) -> int:
     """Get user's user_id by username."""
-    sql = text("SELECT users.user_id FROM users WHERE username=(:username)")
-    user_id = db.session.execute(sql, {"username": username}).fetchone()[0]
+    sql = text("SELECT users.user_id "
+               "FROM users "
+               "WHERE username=(:username)")
+    user_id = db.session.execute(sql, {'username': username}).fetchone()[0]
     return user_id
+
+
+def get_username_by_user_id(user_id: int) -> str:
+    """Get user's username by user_id.'"""
+    sql = text("SELECT username "
+               "FROM users "
+               "WHERE user_id = :user_id ")
+    user = db.session.execute(sql, {'user_id': user_id}).fetchone()[0]
+    return user
 
 
 def get_user_ids_and_names(include_admin: bool = False) -> tuple[int, str]:
     """Get users' user_ids and names."""
-    sql = text("SELECT user_id, username FROM users")
+    sql = text("SELECT user_id, username "
+               "FROM users")
     results = db.session.execute(sql).fetchall()
 
     if not include_admin:
@@ -219,11 +235,10 @@ def get_username_by_reply_id(reply_id: int) -> str:
     """Get username by reply_id."""
     sql = text("SELECT users.username "
                "FROM users, replies "
-               "WHERE "
-               "  users.user_id = replies.user_id "
-               "  AND "
-               "  replies.reply_id = :reply_id")
-    username = db.session.execute(sql, {"reply_id": reply_id}).fetchone()[0]
+               "WHERE users.user_id = replies.user_id "
+               "      AND "
+               "      replies.reply_id = :reply_id")
+    username = db.session.execute(sql, {'reply_id': reply_id}).fetchone()[0]
     return username
 
 
@@ -235,7 +250,7 @@ def get_username_by_thread_id(thread_id: int) -> str:
                "  users.user_id = threads.user_id "
                "  AND "
                "  threads.thread_id = :thread_id")
-    username = db.session.execute(sql, {"thread_id": thread_id}).fetchone()[0]
+    username = db.session.execute(sql, {'thread_id': thread_id}).fetchone()[0]
     return username
 
 
@@ -244,13 +259,13 @@ def get_username_by_thread_id(thread_id: int) -> str:
 ###############################################################################
 
 def insert_category_to_db(category_name: str, restricted: bool = False) -> int:
-    """Add a new category to the database. Return category_id"""
+    """Add a new category to the database. Return category_id."""
     sql = text("INSERT INTO categories (name, restricted) "
                "VALUES (:category_name, :restricted) "
                "ON CONFLICT DO NOTHING "
                "RETURNING category_id")
-    category_id = db.session.execute(sql, {"category_name": category_name,
-                                           "restricted": restricted}).fetchone()[0]
+    category_id = db.session.execute(sql, {'category_name': category_name,
+                                           'restricted': restricted}).fetchone()[0]
 
     db.session.commit()
     return category_id
@@ -258,8 +273,10 @@ def insert_category_to_db(category_name: str, restricted: bool = False) -> int:
 
 def delete_category_from_db(category_id: int) -> None:
     """Delete category from database."""
-    sql = text("DELETE FROM categories WHERE category_id = :category_id")
-    db.session.execute(sql, {"category_id": category_id})
+    sql = text("DELETE "
+               "FROM categories "
+               "WHERE category_id = :category_id")
+    db.session.execute(sql, {'category_id': category_id})
     db.session.commit()
 
 
@@ -268,16 +285,26 @@ def category_exists_in_db(category_name: str) -> bool:
     sql = text("SELECT category_id "
                "FROM categories "
                "WHERE name=:category")
-    result = db.session.execute(sql, {"category": category_name}).fetchall()
+    result = db.session.execute(sql, {'category': category_name}).fetchall()
     return len(result) > 0
 
 
+def category_is_restricted(category_id: int) -> bool:
+    """Return true if the category is restricted."""
+    sql = text("SELECT restricted "
+               "FROM categories "
+               "WHERE category_id = :category_id ")
+    is_restricted = db.session.execute(sql, {'category_id': category_id}).fetchone()[0]
+    return is_restricted
+
+
 def get_list_of_category_ids_and_names() -> list[tuple[int, str]]:
-    """Get list of categories (id and string)."""
+    """Get list of categories (category_id and name)."""
     sql = text("SELECT category_id, name "
                "FROM categories")
     ids_and_categories = db.session.execute(sql).fetchall()
     return ids_and_categories
+
 
 def get_category_data() -> list[tuple[int, str]]:
     """Get category data."""
@@ -288,11 +315,11 @@ def get_category_data() -> list[tuple[int, str]]:
 
 
 def get_list_of_thread_ids_by_category_id(category_id: int) -> list[int]:
-    """Get list of thread ids from database that match category id."""
+    """Get list of thread_ids from database that match category_id."""
     sql = text("SELECT threads.thread_id "
                "FROM threads "
                "WHERE threads.category_id = :category_id")
-    thread_ids = [t[0] for t in db.session.execute(sql, {"category_id": category_id}).fetchall()]
+    thread_ids = [t[0] for t in db.session.execute(sql, {'category_id': category_id}).fetchall()]
     return thread_ids
 
 
@@ -301,42 +328,46 @@ def get_list_of_thread_ids_by_category_id(category_id: int) -> list[int]:
 ###############################################################################
 
 def insert_permission_into_db(category_id: int, user_id: int) -> int:
-    """Insert permission into database.
+    """Insert permission into database. Return permission_id.
 
     The permission controls whether a user is allowed to access a category.
     """
     sql = text("INSERT INTO permissions (user_id, category_id)"
-               "VALUES (:user_id, :category_id)"
+               "VALUES (:user_id, :category_id) "
                "ON CONFLICT DO NOTHING "
                "RETURNING permission_id")
-    permission_id = db.session.execute(sql, {"user_id": user_id,
-                                             "category_id": category_id}).fetchone()[0]
+    permission_id = db.session.execute(sql, {'user_id'     : user_id,
+                                             'category_id' : category_id}).fetchone()[0]
     db.session.commit()
     return permission_id
 
 
 def delete_permissions_for_category_from_db(category_id: int) -> None:
     """Delete permissions for category from database."""
-    sql = text("DELETE FROM permissions WHERE category_id = :category_id")
-    db.session.execute(sql, {"category_id": category_id})
+    sql = text("DELETE "
+               "FROM permissions "
+               "WHERE category_id = :category_id")
+    db.session.execute(sql, {'category_id': category_id})
     db.session.commit()
+
+
+def user_is_whitelisted(category_id: int, user_id: int) -> bool:
+    """Return true if the user is whitelisted."""
+    sql = text("SELECT user_id "
+               "FROM permissions "
+               "WHERE category_id = :category_id ")
+    permission_ids = [t[0] for t in db.session.execute(sql, {'category_id': category_id}).fetchall()]
+    return user_id in permission_ids
 
 
 def user_has_permission_to_category(category_id: int, user_id: int) -> bool:
     """Return True if user has permission to access the category."""
-    sql = text("SELECT username FROM users WHERE user_id = :user_id ")
-    user = db.session.execute(sql, {"user_id": user_id}).fetchone()[0]
-    if user == ADMIN:
+    if get_username_by_user_id(user_id) == ADMIN:
         return True
 
-    sql = text("SELECT restricted FROM categories WHERE category_id = :category_id ")
-    is_restricted = db.session.execute(sql, {"category_id": category_id}).fetchone()[0]
+    is_restricted = category_is_restricted(category_id)
 
-    sql = text("SELECT user_id FROM permissions WHERE category_id = :category_id ")
-    permission_ids = [t[0] for t in db.session.execute(sql, {"category_id": category_id}).fetchall()]
-    has_permission = user_id in permission_ids
-
-    if not is_restricted or (is_restricted and has_permission):
+    if not is_restricted or (is_restricted and user_is_whitelisted(category_id, user_id)):
         return True
     return False
 
@@ -345,36 +376,47 @@ def user_has_permission_to_category(category_id: int, user_id: int) -> bool:
 #                                   THREADS                                   #
 ###############################################################################
 
-def insert_thread_into_db(category_id: int, user_id: int, title: str, content: str) -> int:
+def insert_thread_into_db(category_id : int,
+                          user_id     : int,
+                          title       : str,
+                          content     : str
+                          ) -> int:
     """Insert new thread into the database."""
     sql = text("INSERT INTO threads (category_id, user_id, title, content) "
                "VALUES (:category_id, :user_id, :title, :content) "
                "ON CONFLICT DO NOTHING "
                "RETURNING thread_id")
-    thread_id = db.session.execute(sql, {"category_id": category_id,
-                                         "user_id": user_id,
-                                         "title": title,
-                                         "content": content}).fetchone()[0]
+    thread_id = db.session.execute(sql, {'category_id' : category_id,
+                                         'user_id'     : user_id,
+                                         'title'       : title,
+                                         'content'     : content}).fetchone()[0]
 
     db.session.commit()
     return thread_id
 
 
-def update_thread_in_db(thread_id: int, title: str, message: str) -> None:
+def update_thread_in_db(thread_id : int,
+                        title     : str,
+                        message   : str
+                        ) -> None:
     """Update thread in database."""
     sql = text("UPDATE threads "
                "SET "
                "  title = :title, "
                "  content = :content "
                "WHERE threads.thread_id = :thread_id ")
-    db.session.execute(sql, {"thread_id": thread_id, "title": title, "content": message})
+    db.session.execute(sql, {'thread_id' : thread_id,
+                             'title'     : title,
+                             'content'   : message})
     db.session.commit()
 
 
 def delete_thread_from_db(thread_id: int) -> None:
     """Delete thread from database."""
-    sql = text("DELETE FROM threads WHERE threads.thread_id = :thread_id")
-    db.session.execute(sql, {"thread_id": thread_id})
+    sql = text("DELETE "
+               "FROM threads "
+               "WHERE threads.thread_id = :thread_id")
+    db.session.execute(sql, {'thread_id': thread_id})
     db.session.commit()
 
 
@@ -395,7 +437,7 @@ def get_thread_by_thread_id(thread_id: int) -> Thread:
                "  threads.thread_id = :thread_id "
                "ORDER BY thread_tstamp")
 
-    thread_data = db.session.execute(sql, {"thread_id": thread_id}).fetchone()
+    thread_data = db.session.execute(sql, {'thread_id': thread_id}).fetchone()
     thread = Thread(*thread_data)
 
     for reply in get_list_of_replies_by_thread_id(thread_id):
@@ -408,15 +450,18 @@ def get_thread_by_thread_id(thread_id: int) -> Thread:
 #                                   REPLIES                                   #
 ###############################################################################
 
-def insert_reply_into_db(thread_id: int, user_id: int, content: str) -> int:
+def insert_reply_into_db(thread_id : int,
+                         user_id   : int,
+                         content   : str
+                         ) -> int:
     """Insert reply to replies table. Return reply_id."""
     sql = text("INSERT INTO replies (thread_id, user_id, content)"
                "VALUES (:thread_id, :user_id, :content)"
                "ON CONFLICT DO NOTHING "
                "RETURNING replies.reply_id ")
-    reply_id = db.session.execute(sql, {"thread_id": thread_id,
-                                        "user_id": user_id,
-                                        "content": content}).fetchone()[0]
+    reply_id = db.session.execute(sql, {'thread_id' : thread_id,
+                                        'user_id'   : user_id,
+                                        'content'   : content}).fetchone()[0]
     db.session.commit()
     return reply_id
 
@@ -426,7 +471,8 @@ def update_reply_in_db(reply_id: int, message: str) -> None:
     sql = text("UPDATE replies "
                "SET content = :content "
                "WHERE replies.reply_id = :reply_id ")
-    db.session.execute(sql, {"reply_id": reply_id, "content": message})
+    db.session.execute(sql, {'reply_id' : reply_id,
+                             'content'  : message})
     db.session.commit()
 
 
@@ -434,7 +480,7 @@ def delete_reply_from_db(reply_id: int) -> None:
     """Delete reply from database."""
     sql = text("DELETE FROM replies "
                "WHERE replies.reply_id = :reply_id")
-    db.session.execute(sql, {"reply_id": reply_id})
+    db.session.execute(sql, {'reply_id': reply_id})
     db.session.commit()
 
 
@@ -453,7 +499,7 @@ def get_reply_by_id(reply_id: int) -> Reply:
                "  AND "
                "  replies.reply_id = :reply_id "
                "ORDER BY replies.reply_tstamp")
-    reply_data = db.session.execute(sql, {"reply_id": reply_id}).fetchone()
+    reply_data = db.session.execute(sql, {'reply_id': reply_id}).fetchone()
     return Reply(*reply_data)
 
 
@@ -472,7 +518,7 @@ def get_list_of_replies_by_thread_id(thread_id: int) -> list[Reply]:
                "  AND "
                "  replies.thread_id = :thread_id "
                "ORDER BY replies.reply_tstamp")
-    replies_data = db.session.execute(sql, {"thread_id": thread_id}).fetchall()
+    replies_data = db.session.execute(sql, {'thread_id': thread_id}).fetchall()
     list_of_replies = [Reply(*reply_data) for reply_data in replies_data]
 
     for reply in list_of_replies:
@@ -487,29 +533,43 @@ def get_list_of_replies_by_thread_id(thread_id: int) -> list[Reply]:
 
 def insert_like_to_db(user_id: int, reply_id: int) -> None:
     """Insert like to the database."""
-    sql = text("INSERT INTO likes (reply_id, user_id) VALUES (:reply_id, :user_id)")
-    db.session.execute(sql, {"reply_id": reply_id, "user_id": user_id})
+    sql = text("INSERT INTO likes (reply_id, user_id) "
+               "VALUES (:reply_id, :user_id)")
+    db.session.execute(sql, {'reply_id': reply_id,
+                             'user_id': user_id})
     db.session.commit()
 
 
 def delete_like_from_db(user_id: int, reply_id: int) -> None:
     """Remove like from the database."""
-    sql = text("DELETE FROM likes WHERE user_id=:user_id AND reply_id=:reply_id")
-    db.session.execute(sql, {"user_id": user_id, "reply_id": reply_id})
+    sql = text("DELETE "
+               "FROM likes "
+               "WHERE user_id=:user_id "
+               "      AND "
+               "      reply_id=:reply_id")
+    db.session.execute(sql, {'user_id'  : user_id,
+                             'reply_id' : reply_id})
     db.session.commit()
 
 
 def user_has_liked_reply(user_id: int, reply_id: int) -> bool:
     """Check if user has liked a reply."""
-    sql = text("SELECT COUNT(*) FROM likes WHERE user_id=:user_id AND reply_id=:reply_id")
-    likes_data = db.session.execute(sql, {"user_id": user_id, "reply_id": reply_id}).fetchone()
+    sql = text("SELECT COUNT(*) "
+               "FROM likes "
+               "WHERE user_id=:user_id "
+               "      AND "
+               "      reply_id=:reply_id")
+    likes_data = db.session.execute(sql, {'user_id'  : user_id,
+                                          'reply_id' : reply_id}).fetchone()
     return bool(likes_data[0])
 
 
 def get_likes_by_reply_id(reply_id: int) -> dict[int, Like]:
     """Return likes for reply as {like_id : Like} dictionary."""
-    sql = text("SELECT like_id, user_id FROM likes WHERE reply_id = :reply_id")
-    likes_data = db.session.execute(sql, {"reply_id": reply_id}).fetchall()
+    sql = text("SELECT like_id, user_id "
+               "FROM likes "
+               "WHERE reply_id = :reply_id")
+    likes_data = db.session.execute(sql, {'reply_id': reply_id}).fetchall()
     return {like_id: Like(like_id, user_id, reply_id) for like_id, user_id in likes_data}
 
 
@@ -523,21 +583,18 @@ def search_from_db(query: str) -> list[int]:
     # Search threads (title and content of OP's message)
     sql = text("SELECT threads.thread_id "
                "FROM threads, replies "
-               "WHERE "
-               "  threads.title LIKE :query "
-               "  OR "
-               "  threads.content LIKE :query")
-    thread_ids = [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
+               "WHERE threads.title LIKE :query "
+               "      OR "
+               "      threads.content LIKE :query")
+    thread_ids = [t[0] for t in db.session.execute(sql, {'query': f'%{query}%'}).fetchall()]
 
     # Search content of replies
     sql = text("SELECT threads.thread_id "
                "FROM threads, replies "
-               "WHERE "
-               "  replies.content LIKE :query "
-               "  AND "
-               "  replies.thread_id = threads.thread_id"
-               )
-    thread_ids += [t[0] for t in db.session.execute(sql, {"query": f'%{query}%'}).fetchall()]
+               "WHERE replies.content LIKE :query "
+               "      AND "
+               "      replies.thread_id = threads.thread_id")
+    thread_ids += [t[0] for t in db.session.execute(sql, {'query': f'%{query}%'}).fetchall()]
 
     return list(set(thread_ids))
 
