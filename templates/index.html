@@ -29,16 +29,16 @@
 
     <p>
     {% if session.username == "admin" %}
-        <a href="{{url_for('new_category')}}" class="btn btn-primary">Uusi kategoria</a>
+        <a href="{{url_for('new_category')}}" class="btn btn-primary, normal-link">Uusi kategoria</a>
     {% endif %}
 
     {% if forum_categories.items() %}
-        <a href="{{url_for('new_thread')}}" class="btn btn-primary">Uusi ketju</a>
+        <a href="{{url_for('new_thread')}}" class="btn btn-primary, normal-link">Uusi ketju</a>
     {%endif%}
-    <a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
+    <a href="{{url_for('logout')}}" class="btn btn-primary, normal-link">Kirjaudu ulos</a>
 
     {% if forum_categories.items() %}
-        <form action="/search_posts" method="GET">
+        <form action="/search_posts" method="GET" class="hover-box">
             Hakusana: <input type="text" name="query">
             <input type="submit" value="Hae">
         </form>
@@ -50,16 +50,17 @@
 
                 <h3>{{ category.name }} ({{category.total_threads()}} ketjua, {{category.total_posts()}} viestiä yhteensä)</h3>
                 {%if session.username == "admin" %}
-                    <a href="/delete_category/{{ category_id }}">Poista kategoria</a>
+                    <a href="/delete_category/{{ category_id }}" class="danger-link">Poista kategoria (admin)</a>
                 {% endif %}
 
                 {% for thread in category.threads.values() %}
                 <ul class="no-bullet">
-                    <li> <a href="/thread/{{ thread.thread_id }}">{{thread.title}}</a>
-                        <span style="font-size: small;"><b> - {{thread.username}}</b>
+                    <li class="hover-box">
+                        <div style="font-size: small;"><b> {{thread.username}}</b>
                             ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})
-                            (Tuorein viesti: {{thread.dt_most_recent_post().strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
-                    <li class="indented">{{ thread.content|truncate(50, True)}}</li>
+                            (Tuorein viesti: {{thread.dt_most_recent_post().strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
+                        <a href="/thread/{{ thread.thread_id }}" class="thread-link">{{thread.title}}</a>
+                        </div>{{ thread.content|truncate(50, True)}}</li>
                 </ul>
                 {% endfor %}
             {% endif %}
@@ -67,15 +68,18 @@
     {% endif %}
 
 {% else %}
+    <span class="hover-box">
     <form action="/login" method="POST">
         Käyttäjätunnus<br>
         <input type="text" name="username"><br>
         Salasana<br>
         <input type="password" name="password"><br>
-        <input type="submit" value="Kirjaudu">
+        <input type="submit" value="Kirjaudu" class="normal-link">
         <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
     </form>
-    <p><a href="{{url_for('new_user')}}" class="btn btn-primary">Rekisteröidy</a>
+    <br>Tai<br>
+    <a href="{{url_for('new_user')}}" class="btn btn-primary, normal-link">Rekisteröidy</a>
+    </span>
 {% endif %}
 
 </body>

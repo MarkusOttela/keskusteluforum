@@ -22,12 +22,32 @@
 
 <h3>Muokkaa vastaustasi ketjuun {{thread.title}}</h3>
 
+<span class="hover-box">
+    <p style="font-size: small; margin-bottom: 0; margin-top: 0;">
+    <b>{{thread.username}}</b> ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}}):
+    <h3>{{thread.title}}</h3>
+    {{thread.content}}<br>
+</span><br>
 
-<form action="/submit_modified_reply/{{thread.thread_id}}/{{reply.reply_id}}" method="post">
-    <textarea name="content" rows="10" cols="50">{{reply.content}}</textarea>
-    <br><input type="submit" value="Lähetä">
-    <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
-</form>
+<ul>
+{% for reply in thread.replies.values() %}
+    <li class="hover-box">
+    <span style="font-size: small;">
+        <b>{{reply.likes|length}} 👍 {{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
+    </span>
+    {{reply.content}}
+{% endfor %}
+</ul>
+
+<span class="reply-box">
+    <h3>Muokkaa vastausta käyttäjän {{thread.username}} ketjuun:</h3>
+
+    <form action="/submit_modified_reply/{{thread.thread_id}}/{{reply.reply_id}}" method="post">
+        <textarea name="content" rows="10" cols="50">{{reply.content}}</textarea>
+        <br><input type="submit" value="Lähetä">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+    </form>
+</span>
 
 </body>
 </html>

@@ -362,10 +362,7 @@ def submit_reply(thread_id: int) -> str:
 
         insert_reply_into_db(thread_id, get_user_id_for_session(), content)
 
-    return render_template('thread.html',
-                           user_id=get_user_id_for_session(),
-                           username=session[USERNAME],
-                           thread=get_thread_by_thread_id(thread_id))
+    return redirect(f"/thread/{thread_id}")  # type: ignore
 
 
 @app.route("/edit_reply/<int:thread_id>/<int:reply_id>", methods=[GET, POST])

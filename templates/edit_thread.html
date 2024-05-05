@@ -22,9 +22,10 @@
 
 {% if ids_and_categories %}
 
-    <h3>Ketju: {{thread.title}}</h3>
+    <span class="hover-box">
+    <h3>Muokkaa ketjua {{thread.title}}</h3>
 
-    Muokkaa aihetta<br><br>
+    <br>
 
     <form action="/submit_modified_thread/{{thread.thread_id}}" method="post">
         <label for="title">Otsikko:</label><br>
@@ -34,6 +35,7 @@
         <br><input type="submit" value="Lähetä">
         <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
     </form>
+    </span>
 {% endif %}
 
 </body>

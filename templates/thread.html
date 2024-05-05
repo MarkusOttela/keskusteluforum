@@ -21,40 +21,45 @@
 {% endwith %}
 
 {% if session.username %}
-    <a href="{{url_for('index')}}" class="btn btn-primary">Etusivulle</a>
-    <a href="{{url_for('logout')}}" class="btn btn-primary">Kirjaudu ulos</a>
+    <a href="{{url_for('index')}}" class="btn btn-primary, normal-link">Etusivulle</a>
+    <a href="{{url_for('logout')}}" class="btn btn-primary, normal-link">Kirjaudu ulos</a><br><br>
 
-    <p style="font-size: small; margin-bottom: 0">
-    <b>{{thread.username}}</b> ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}}):
-    <h3>{{thread.title}}</h3>
-    {{thread.content}}<br>
-    {% if thread.username == session.username %}
-    <a href="/edit_thread/{{ thread.thread_id }}" class="btn btn-primary">Muokkaa</a>
-    <a href="/delete_thread/{{ thread.thread_id }}" class="btn btn-primary">Poista</a><br>
-{% endif %}
+    <span class="hover-box">
+        <p style="font-size: small; margin-bottom: 0; margin-top: 0;">
+        <b>{{thread.username}}</b> ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}}):
+        <h3>{{thread.title}}</h3>
+        {{thread.content}}<br>
+        {% if thread.username == session.username %}<br>
+            <a href="/edit_thread/{{ thread.thread_id }}" class="btn btn-primary, normal-link">Muokkaa</a>
+            <a href="/delete_thread/{{ thread.thread_id }}" class="btn btn-primary, danger-link">Poista</a><br>
+        {% endif %}
+    </span>
 
     <ul>
     {% for reply in thread.replies.values() %}
-        <li>
-        <span style="font-size: small;">
-            <b>{{reply.likes|length}} 👍 {{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
-        </span>
+        <li class="hover-box">
+            <span style="font-size: small;">
+                <b>{{reply.likes|length}} 👍 {{reply.username}}</b> ({{reply.reply_tstamp.strftime("%d-%m-%Y - %H:%M:%S")}}):<br>
+            </span>
+
         {{reply.content}}
+
+        <br>
         {% if reply.username == session.username %}
-            <br><a href="/edit_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Muokkaa</a>
-            <a href="/delete_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Poista</a><br>
+            <a href="/edit_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary, normal-link">Muokkaa</a>
+            <a href="/delete_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary, danger-link">Poista</a><br>
         {%else%}
             {%if not reply.has_been_liked_by(user_id) %}
-            <br><a href="/like_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Tykkää</a>
+                <a href="/like_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary, normal-link">Tykkää</a>
             {%else%}
-            <br><a href="/unlike_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary">Älä tykkää</a>
+                <a href="/unlike_reply/{{ thread.thread_id }}/{{ reply.reply_id }}" class="btn btn-primary, normal-link">Älä tykkää</a>
             {%endif%}
         {% endif %}
 
     {% endfor %}
     </ul>
 
-    <p><a href="/new_reply/{{ thread.thread_id }}" class="btn btn-primary">Vastaa</a>
+    <p><a href="/new_reply/{{ thread.thread_id }}" class="btn btn-primary, normal-link">Vastaa</a>
 
 {% endif %}
 

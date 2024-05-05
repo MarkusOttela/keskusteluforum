@@ -28,11 +28,11 @@
         {% for thread in category.threads.values() %}
             {% if thread.thread_id == thread_id %}
                 <ul class="no-bullet">
-                    <li> <a href="/thread/{{ thread.thread_id }}">{{thread.title}}</a>
+                    <li class="hover-box"> <a href="/thread/{{ thread.thread_id }}">{{thread.title}}</a>
                          <span style="font-size: small;"><b> - {{thread.username}}</b>
                          ({{thread.created.strftime("%d-%m-%Y - %H:%M:%S")}})
-                         (Tuorein viesti: {{thread.dt_most_recent_post().strftime("%d-%m-%Y - %H:%M:%S")}})</span></li>
-                    <li class="indented">{{ thread.content|truncate(50, True)}}</li>
+                         (Tuorein viesti: {{thread.dt_most_recent_post().strftime("%d-%m-%Y - %H:%M:%S")}})<br>
+                         </span>{{ thread.content|truncate(50, True)}}</li>
                 </ul>
             {% endif %}
         {%endfor%}

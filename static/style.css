@@ -1,13 +1,51 @@
+
+body {background-color: #e5dac7;}
+
 .no-bullet {
   list-style-type: none;
 }
 
-.indented {
-    text-indent: 10px;
+.hover-box {
+    background-color: #e9c8a0;
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    display: block;
 }
 
-.large-font {
-    font-size: 120%;
+.reply-box {
+    background-color: #e9c8a0;
+    padding: 10px;
+    margin-left: 40px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+.normal-link {
+    background-color: #e5ad5e;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #333;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.danger-link {
+    background-color: #e54646;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: #333;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.thread-link {
+    font-size: 1.4em;
+    font-weight: bold;
+    display: block;
+    color: inherit;
+    text-decoration: none;
 }
 
 h3 {

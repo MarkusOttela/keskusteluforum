@@ -23,19 +23,23 @@
 <h3>Luo uusi kategoria</h3>
 
 <form action="/create_category" method="POST">
-    Kategorian nimi:<br>
-    <input type="text" name="category_name" value="{{category_name}}"><br><br>
-    Kategorian käyttäjät:<br><br>
-    <input type="checkbox" name="all" value="all"> kaikki
+    <br>
+    <span class="hover-box">
+        Kategorian nimi:<br>
+        <input type="text" name="category_name" value="{{category_name}}">
 
-    <p>
-    Tai mukauta:
-    {% for user_id, username in user_ids_and_names %}
-        <input type="checkbox" name="sel_users" value="{{user_id}}"> {{username}}
-    {% endfor %}
+        <br><br>Kategorian käyttäjät:<br><br>
+        <input type="checkbox" name="all" value="all"> Kaikki
 
-    <p>
-    <input type="submit" value="Luo">
+        <p>
+        Tai mukauta:
+        {% for user_id, username in user_ids_and_names %}
+            <br><input type="checkbox" name="sel_users" value="{{user_id}}"> {{username}}
+        {% endfor %}
+
+    </span>
+    <br><br>
+    <input type="submit" value="Luo" class="normal-link">
     <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
 
 </form>

@@ -21,18 +21,19 @@
 {% endwith %}
 
 <h3>Rekisteröidy</h3>
-
-
-<form action="/register" method="POST">
-    Käyttäjätunnus<br>
-    <input type="text" name="username"><br>
-    Salasana<br>
-    <input type="password" name="password2"><br>
-    Salasana uudelleen<br>
-    <input type="password" name="password1"><br>
-    <input type="submit" value="Luo tunnus">
-    <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
-</form>
+<br>
+<span class="hover-box">
+    <form action="/register" method="POST">
+        Käyttäjätunnus<br>
+        <input type="text" name="username"><br>
+        Salasana<br>
+        <input type="password" name="password2"><br>
+        Salasana uudelleen<br>
+        <input type="password" name="password1"><br>
+        <input type="submit" value="Luo tunnus" class="normal-link">
+        <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
+    </form>
+</span>
 
 </body>
 </html>

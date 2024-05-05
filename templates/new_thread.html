@@ -23,7 +23,8 @@
 {% if ids_and_categories %}
 
     <h3>Luo uusi ketju</h3>
-
+    <br>
+    <span class="hover-box">
     <form action="/submit_thread/" method="post">
         <label for="categories">Valitse kategoria ketjulle:</label>
         <select id="categories" name="category_id">
@@ -37,10 +38,10 @@
         <textarea id="title" name="title" rows="1" cols="50">{{request.form.title}}</textarea>
         <br><label for="content">Viesti:</label><br>
         <textarea id="content" name="content" rows="10" cols="50">{{request.form.content}}</textarea>
-        <br><input type="submit" value="Lähetä">
+        <br><input type="submit" value="Lähetä" class="normal-link">
         <input type="hidden" name="csrf_token" value="{{ session.csrf_token }}">
         {% endif %}
     </form>
-
+    </span>
 </body>
 </html>
