@@ -550,7 +550,7 @@ def register() -> str:
     if len(password1) < 12:
         flash("Salasanan on oltava vähintään 12 merkkiä.", category='error')
     if not any(c.isnumeric for c in password1):
-        flash("Salasanan on oltava vähintään 1 numero.", category='error')
+        flash("Salasanassa on oltava vähintään 1 numero.", category='error')
 
     if '_flashes' in session:
         return render_template('new_user.html')
